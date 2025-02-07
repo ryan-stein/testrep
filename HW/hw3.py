@@ -4,21 +4,17 @@ import matplotlib.pyplot as plt
 
 def driver():
 
-# use routines    
-    f = lambda x: x**3+x-4
-    a = 1
-    b = 4
+# finding root for problem 1 part c.)
 
-#    f = lambda x: np.sin(x)
-#    a = 0.1
-#    b = np.pi+0.1
+    f_1 = lambda x: 2*x - 1 - np.sin(x)
+    a_1 = 0
+    b_1 = np.pi / 2
+    tol_1 = 1e-8
 
-    tol = 1e-7
-
-    [astar,ier] = bisection(f,a,b,tol)
+    [astar,ier,n_it] = bisection(f_1,a_1,b_1,tol_1)
     print('the approximate root is',astar)
     print('the error message reads:',ier)
-    print('f(astar) =', f(astar))
+    print('the total number of iterations used = ', n_it)
 
 
 
@@ -59,9 +55,10 @@ def bisection(f,a,b,tol):
       ier = 0
       return [astar, ier, n_it]
 
-    count = 0
+    
     d = 0.5*(a+b)
     while (abs(d-a)> tol):
+      n_it += 1
       fd = f(d)
       if (fd ==0):
         astar = d
@@ -73,8 +70,7 @@ def bisection(f,a,b,tol):
         a = d
         fa = fd
       d = 0.5*(a+b)
-      count = count +1
-#      print('abs(d-a) = ', abs(d-a))
+
       
     astar = d
     ier = 0
