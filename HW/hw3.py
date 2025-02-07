@@ -1,6 +1,7 @@
 # import libraries
 import numpy as np
 import matplotlib.pyplot as plt
+import sympy
 
 def driver():
 
@@ -12,9 +13,39 @@ def driver():
     tol_1 = 1e-8
 
     [astar,ier,n_it] = bisection(f_1,a_1,b_1,tol_1)
+    print('Problem 1 c.):')
     print('the approximate root is',astar)
     print('the error message reads:',ier)
     print('the total number of iterations used = ', n_it)
+
+# problem 2 a.)
+
+    f_2a = lambda x: (x - 5)**9
+    a_2 = 4.82
+    b_2 = 5.2
+    tol_2 = 1e-4
+
+    [astar_2a,ier_2a,n_it_2a] = bisection(f_2a,a_2,b_2,tol_2)
+    print('Problem 2 a.): f(x) = (x-5)^9')
+    print('the approximate root is',astar_2a)
+    print('the error message reads:',ier_2a)
+    print('the total number of iterations used = ', n_it_2a)
+
+# problem 2 b.)
+
+    # get expanded form using sympy library
+    x = sympy.Symbol('x', real=True)
+    f_2_sym = (x - 5)**9
+    f_2_expanded_sym = sympy.expand(f_2_sym)
+
+    # converted expanded sympy function to usable function in bisection:
+    f_2_expanded = sympy.lambdify(x, f_2_expanded_sym, 'numpy')
+
+    [astar_2b,ier_2b,n_it_2b] = bisection(f_2_expanded,a_2,b_2,tol_2)
+    print('Problem 2 b.): expanded f')
+    print('the approximate root is',astar_2b)
+    print('the error message reads:',ier_2b)
+    print('the total number of iterations used = ', n_it_2b)
 
 
 
