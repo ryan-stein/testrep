@@ -18,6 +18,8 @@ def driver():
     print('the error message reads:',ier)
     print('the total number of iterations used = ', n_it)
 
+
+
 # problem 2 a.)
 
     f_2a = lambda x: (x - 5)**9
@@ -46,6 +48,22 @@ def driver():
     print('the approximate root is',astar_2b)
     print('the error message reads:',ier_2b)
     print('the total number of iterations used = ', n_it_2b)
+
+
+
+# problem 3 b.)
+
+    f_3 = lambda x: x**3 + x - 4
+    a_3 = 1
+    b_3 = 4
+    tol_3 = 1e-3
+
+    [astar,ier,n_it] = bisection(f_3,a_3,b_3,tol_3)
+    print('Problem 3 b.):')
+    print('the approximate root is',astar)
+    print('the error message reads:',ier)
+    print('the total number of iterations used = ', n_it)     
+
 
 
 
