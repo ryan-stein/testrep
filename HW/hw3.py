@@ -65,6 +65,25 @@ def driver():
     print('the total number of iterations used = ', n_it)     
 
 
+# problem 5 a.)
+
+f_5 = lambda x: x - 4*np.sin(2*x) - 3
+
+x_vals = np.linspace(-2, 8, 1000) #further explaination for this interval in the hw
+y_vals = f_5(x_vals)
+
+# create figure
+plt.figure()
+plt.plot(x_vals, y_vals, label=r'$f(x) = x - 4\sin(2x) - 3$')
+plt.axhline(0, color='black', linewidth=1, linestyle='--')  # horizontal line y = 0
+plt.xlabel('x')
+plt.ylabel('f(x)')
+plt.title('Plot of $f(x) = x - 4\\sin(2x) - 3$')
+plt.grid(True)
+plt.legend()
+plt.show()
+
+
 
 
 
