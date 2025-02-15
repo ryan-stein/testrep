@@ -37,6 +37,45 @@ def driver():
     plt.legend()
     plt.show()
 
+
+    #problem 1b (bisection)
+
+    [astar_1b,ier_1b,n_it_1b] = bisection(f_1, 0, 0.85, 10e-13)
+
+    print('Problem 1 b.):')
+    print('the approximate root is: ',astar_1b)
+    print('the error message reads: ',ier_1b)
+    print('the total number of iterations used = ', n_it_1b)
+
+
+    #problem 1c (newton)
+    
+    #define f'
+    f_1p = lambda x: ((T_i - T_s)/np.sqrt(alpha*t*np.pi)) * np.exp(-1* (x/(2*np.sqrt(alpha*t)))**2)
+
+    #plug into newton method using the two values of x_0:
+    [p_c1,pstar_c1,info_c1,it_c1] = newton(f_1, f_1p, 0.01, 10e-13, 200) #x_0 = 0.01  
+    [p_c2,pstar_c2,info_c2,it_c2] = newton(f_1, f_1p, 0.85, 10e-13, 200) #x_0 = x_bar = 0.85
+
+
+    print('Problem 1 c.):')
+    print('using x_0 = 0.01')
+    print('the approximate root is: ',pstar_c1)
+    print('the error message reads: ',info_c1)
+    print('the total number of iterations used = ', it_c1)
+    print('')
+    print('using x_0 = x_bar = 0.85')
+    print('the approximate root is: ',pstar_c2)
+    print('the error message reads: ',info_c2)
+    print('the total number of iterations used = ', it_c2)
+
+
+
+
+
+
+
+
     return
 
 
@@ -125,6 +164,37 @@ def fixedpt(f,x0,tol,Nmax):
     xstar = x1
     ier = 1
     return [xstar, ier, count]
+
+
+
+def newton(f,fp,p0,tol,Nmax):
+    """
+    Newton iteration.
+    Inputs:
+        f,fp - function and derivative
+        p0 - initial guess for root
+        tol - iteration stops when p_n,p_{n+1} are within tol
+        Nmax - max number of iterations
+    Returns:
+        p - an array of the iterates
+        pstar - the last iterate
+        info - success message
+            - 0 if we met tol
+            - 1 if we hit Nmax iterations (fail)
+    """
+    p = np.zeros(Nmax+1)
+    p[0] = p0
+    for it in range(Nmax):
+        p1 = p0-f(p0)/fp(p0)
+        p[it+1] = p1
+        if (abs(p1-p0) < tol):
+            pstar = p1
+            info = 0
+            return [p,pstar,info,it]
+        p0 = p1
+    pstar = p1
+    info = 1
+    return [p,pstar,info,it]
 
 
       
