@@ -9,6 +9,30 @@ import math
 def driver():
 
     print("HW #6:")
+    print("\n")
+
+    # initial guess vectors:
+    x0_i = np.array([1, 1])
+    x0_ii = np.array([1, -1])
+    x0_iii = np.array([0, 0])
+
+
+    #perform each method for each initial guess:
+
+    #Newton
+    [xstar_N_1, ier_N_1, its_N_1] = Newton(x0_i, 10e-8, 100)
+    [xstar_N_2, ier_N_2, its_N_2] = Newton(x0_ii, 10e-8, 100)
+    #[xstar_N_3, ier_N_3, its_N_3] = Newton(x0_iii, 10e-8, 100)
+
+    #Broyden
+    [xstar_B_1, ier_B_1, its_B_1] = broyden_method(x0_i, 10e-8, 100)
+    [xstar_B_2, ier_B_2, its_B_2] = broyden_method(x0_ii, 10e-8, 100)
+    #[xstar_B_3, ier_B_3, its_B_3] = broyden_method(x0_iii, 10e-8, 100)
+
+    #Lazy Newton
+    [xstar_L_1, ier_L_1, its_L_1] = lazyNewton(x0_i, 10e-8, 100)
+    [xstar_L_2, ier_L_2, its_L_2] = lazyNewton(x0_ii, 10e-8, 100)
+    #[xstar_L_3, ier_L_3, its_L_3] = lazyNewton(x0_iii, 10e-8, 100)
 
 
 
@@ -17,12 +41,67 @@ def driver():
 
 
 
+    print("Problem 1:")
+    print()
+    print("For initial guess [1, 1]:")
+    print()
+    print("Using Newton's Method")
+    print("the approximate root is: ", xstar_N_1)
+    print("the error message reads: ", ier_N_1)
+    print("the total number of iterations used = ", its_N_1)
+    print()
+    print("Using Broyden's Method")
+    print("the approximate root is: ", xstar_B_1)
+    print("the error message reads: ", ier_B_1)
+    print("the total number of iterations used = ", its_B_1)
+    print()
+    print("Using Lazy Newton's Method")
+    print("the approximate root is: ", xstar_L_1)
+    print("the error message reads: ", ier_L_1)
+    print("the total number of iterations used = ", its_L_1)
 
+    print("\n")
 
+    print("For initial guess [1, -1]:")
+    print()
+    print("Using Newton's Method")
+    print("the approximate root is: ", xstar_N_2)
+    print("the error message reads: ", ier_N_2)
+    print("the total number of iterations used = ", its_N_2)
+    print()
+    print("Using Broyden's Method")
+    print("the approximate root is: ", xstar_B_2)
+    print("the error message reads: ", ier_B_2)
+    print("the total number of iterations used = ", its_B_2)
+    print()
+    print("Using Lazy Newton's Method")
+    print("the approximate root is: ", xstar_L_2)
+    print("the error message reads: ", ier_L_2)
+    print("the total number of iterations used = ", its_L_2)
 
+    print("\n")
 
+    print("For initial guess [0, 0]:")
+    print("The Jacobian evaluated at (0,0) is singular so none of the methods will work.")
 
+    """
+    print("Using Newton's Method")
+    print("the approximate root is: ", xstar_N_3)
+    print("the error message reads: ", ier_N_3)
+    print("the total number of iterations used = ", its_N_3)
+    print()
+    print("Using Broyden's Method")
+    print("the approximate root is: ", xstar_B_3)
+    print("the error message reads: ", ier_B_3)
+    print("the total number of iterations used = ", its_B_3)
+    print()
+    print("Using Lazy Newton's Method")
+    print("the approximate root is: ", xstar_L_3)
+    print("the error message reads: ", ier_L_3)
+    print("the total number of iterations used = ", its_L_3)
 
+    """
+    
 
 
 #Defining routines:
@@ -103,7 +182,7 @@ def broyden_method(x0, tol, Nmax):
         denominator = np.dot(p, p)
         
         # Safeguard: denominator should not be zero
-        if abs(denominator) < 1e-12:
+        if abs(denominator) < 1e-14:
             return [x1, 1, its + 1]
         
         u = r / denominator
@@ -162,7 +241,7 @@ def lazyNewton(x0, tol, Nmax):
 
 
 
-
+driver()
 
 
 
