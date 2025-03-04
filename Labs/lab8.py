@@ -14,7 +14,7 @@ def driver():
 
     #create points you want to evaluate at
     Neval = 1000
-    xeval = np.linspace(a, b, 1000)
+    xeval = np.linspace(a, b, Neval)
 
     # number of intervals
     Nint = 10
@@ -25,16 +25,23 @@ def driver():
     # evaluate actual f at evaluation points
     f_real = f(xeval)
 
+    # I am going to plot only the interpolation nodes as points so that the first plot is more clear, but I will include the xeval nodes for the error plot
+    x_nodes = np.linspace(a, b, Nint+1)
+    y_nodes = f(x_nodes)
+
+
     # plot both to compare
     plt.figure()
-    plt.plot(xeval,f_real,'ro-', label = 'Exact Function')
-    plt.plot(xeval,yeval,'bs-', label = 'Linear Spline')
+    plt.scatter(x_nodes, y_nodes, color = 'black', marker = 'o', label = 'Interpolation Nodes')
+    plt.plot(xeval,f_real, color = 'red', label = 'Exact Function')
+    plt.plot(xeval,yeval, color = 'blue', label = 'Linear Spline: (11 interpolation nodes)')
     plt.legend()
     plt.show()
 
     err = abs(yeval-f_real)
     plt.figure()
     plt.plot(xeval,err,'ro-')
+    plt.title('Absolute Error Using Linear Splines')
     plt.show()
 
 
@@ -65,6 +72,7 @@ def eval_lin_spline(xeval,Neval,a,b,f,Nint):
 
         atmp = xint[jint]
         btmp= xint[jint+1]
+        
     # find indices of values of xeval in the interval
         ind= np.where((xeval >= atmp) & (xeval <= btmp))
         xloc = xeval[ind]
