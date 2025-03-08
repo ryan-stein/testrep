@@ -103,14 +103,6 @@ def prob2():
 
 
 
-
-
-
-
-
-
-
-
 # defining routines
 
 def  eval_monomial(xeval,coef,N,Neval):
@@ -165,6 +157,13 @@ def wj(j, x_j, xint, N):
 
 
 def p(x, xint, yint, N):
+
+    # If x is exactly one of the nodes, return the known value
+    for j in range(N):
+        if np.isclose(x, xint[j]):
+            return yint[j]
+        
+    # otherwise compute the normal formula
    
     phi_n = phi(x, xint, N)
 
@@ -182,18 +181,6 @@ def p(x, xint, yint, N):
         sum += (w_j * yint[j])/(x-x_j)
 
     return phi_n * sum
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
