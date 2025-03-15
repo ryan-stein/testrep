@@ -101,6 +101,105 @@ def prob1():
         # Layout and show
         plt.tight_layout()
         plt.show()
+
+
+def prob2():
+
+    print("Problem 2")
+
+    # define f
+    f = lambda x: 1/(1 + x**2)
+
+    # define f'
+    f_prime = lambda x: (-2*x)/((1 + x**2)**2)
+    f_prime_left = f_prime(-5)
+    f_prime_right = f_prime(5)
+
+    # compute exact f(x) for comparison
+    x_exact = np.linspace(-5,5,1001)
+    y_exact = f(x_exact)
+
+    
+    # compute interpolation for n = 5, 10, 15, and 20 nodes
+    for nNodes in range(5, 21, 5):
+
+        #create  N equidistant interpolation nodes on [-5,5]:
+        N = nNodes
+        xint = np.zeros(N)
+
+        for j in range(1, N+1):
+            xint[j-1] = 5 * np.cos(((2*j - 1)*np.pi)/(2*N)) #modified code for chebyshev nodes
+
+        xint = np.sort(xint)
+
+        yint = f(xint)
+        y_prime_int = f_prime(xint)
+
+        Neval = 1000    
+        xeval = np.linspace(-5,5, Neval)
+
+        # evalaute p(x) using barycentric lagrange polynomials
+        yeval_lagrange = np.zeros(Neval)
+
+        for i in range(Neval):
+           yeval_lagrange[i] = p_lagrange(xeval[i], xint, yint, N)
+
+
+        # evaluate p(x) using hermite-lagrange interpolation
+        yeval_hermite = np.zeros(Neval)
+
+        for i in range(Neval):
+            yeval_hermite[i] = p_hermite(xeval[i], xint, yint, y_prime_int, N)
+
+
+        # evaluate using natural cubic splines
+        (M_n,C_n,D_n) = create_natural_spline(yint,xint,N-1)
+
+        yeval_natural = eval_cubic_spline(xeval,Neval,xint,N-1,M_n,C_n,D_n)
+
+
+
+        # evaluate p(x) using clamped cubic splines
+        (M_c,C_c,D_c) = create_clamped_spline(yint, xint, N-1, f_prime_left, f_prime_right)
+
+        yeval_clamped = eval_cubic_spline(xeval,Neval,xint,N-1,M_c,C_c,D_c)
+
+
+        # Plot all four methods in a single 2×2 figure
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        fig.suptitle(f'Comparison of Interpolation Methods with N = {N} Chebyshev Nodes')
+
+        # Top-left: Barycentric Lagrange
+        axes[0, 0].scatter(xint, yint, color='black', marker='o', label='Interpolation Nodes')
+        axes[0, 0].plot(x_exact, y_exact, color='red', label='Exact Function')
+        axes[0, 0].plot(xeval, yeval_lagrange, color='blue', label='Barycentric Lagrange')
+        axes[0, 0].legend()
+        axes[0, 0].set_title('Barycentric Lagrange')
+
+        # Top-right: Hermite-Lagrange
+        axes[0, 1].scatter(xint, yint, color='black', marker='o', label='Interpolation Nodes')
+        axes[0, 1].plot(x_exact, y_exact, color='red', label='Exact Function')
+        axes[0, 1].plot(xeval, yeval_hermite, color='blue', label='Hermite-Lagrange')
+        axes[0, 1].legend()
+        axes[0, 1].set_title('Hermite-Lagrange')
+
+        # Bottom-left: Natural Spline
+        axes[1, 0].scatter(xint, yint, color='black', marker='o', label='Interpolation Nodes')
+        axes[1, 0].plot(x_exact, y_exact, color='red', label='Exact Function')
+        axes[1, 0].plot(xeval, yeval_natural, color='blue', label='Natural Spline')
+        axes[1, 0].legend()
+        axes[1, 0].set_title('Natural Cubic Spline')
+
+        # Bottom-right: Clamped Spline
+        axes[1, 1].scatter(xint, yint, color='black', marker='o', label='Interpolation Nodes')
+        axes[1, 1].plot(x_exact, y_exact, color='red', label='Exact Function')
+        axes[1, 1].plot(xeval, yeval_clamped, color='blue', label='Clamped Spline')
+        axes[1, 1].legend()
+        axes[1, 1].set_title('Clamped Cubic Spline')
+
+        # Layout and show
+        plt.tight_layout()
+        plt.show()
         
 
    
@@ -338,4 +437,5 @@ def create_clamped_spline(yint, xint, N, fprime_left, fprime_right):
     return (M, C, D)
 
 
-prob1()
+#prob1()
+prob2()
