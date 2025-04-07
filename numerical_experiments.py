@@ -57,11 +57,21 @@ def driver():
 
     exp_ex_evals = []
 
-    # evaluate each function using various numbers of data points and store the evaluation as a list of lists
+    # initialize lists to store different levels of noise
+    normal_small = []
+    normal_med = []
+    normal_large = []
+
+    uni_small = []
+    uni_med = []
+    uni_large = []
+
+    # evaluate each function using various numbers of data points and store the evaluation as a list of lists, and create random noise vectors
     for point in n_points:
 
         xvals = np.linspace(-3, 3, point) # I've chosen functions that are "interesting" between [-3,3] but this can easily be changed
 
+        #exact function evaliations:
         lin_ex1_evals.append(lin_ex1(xvals))
         lin_ex2_evals.append(lin_ex2(xvals))
         lin_ex3_evals.append(lin_ex3(xvals))
@@ -71,6 +81,22 @@ def driver():
         poly_ex3_evals.append(poly_ex3(xvals))
 
         exp_ex_evals.append(exp_ex(xvals))
+
+        # random noise vectors:
+        normal_small.append(rng.normal(0, 1, size=point))
+        normal_med.append(rng.normal(0, 2, size=point))
+        normal_large.append(rng.normal(0, 3, size=point))
+
+        uni_small.append(rng.uniform(-1, 1, size=point))
+        uni_med.append(rng.uniform(-2, 2, size=point))
+        uni_large.append(rng.uniform(-3, 3, size=point))
+
+    
+    
+
+    
+    
+
 
 
 
