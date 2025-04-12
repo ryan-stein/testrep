@@ -32,12 +32,32 @@ def prob1():
     print(f"It computed this using {f_calls_simp} function evaluations. \n")
 
     #comparisons to quad with tolerance 10^-4
-    print("Comparison to quad with tolerance $10^-4$: \n")
+    print("Comparison to quad with tolerance 10^-4: \n")
     print(f"quad evaluated this integral to be {val2}, and used {f_calls_quad2} function calls to do so. \n")
     print(f"Composite Trapezoidal rule evaluated the integral to be {I_trap}, giving it an error of: {abs(I_trap-val2)}")
     print(f"It computed this using {f_calls_trap} function evaluations. \n")
     print(f"Composite Simpson's rule evaluated the integral to be {I_simp}, giving it an error of: {abs(I_simp-val2)}")
     print(f"It computed this using {f_calls_simp} function evaluations. \n")
+
+    return
+
+
+def prob2():
+
+    # define f(t) to account for 1/t
+    def f(t):
+        if t == 0.0:
+            return 0.0
+        else:
+            return t*np.cos(1/t)
+
+    # computing integral using simpsons with 5 nodes (M = 4):
+    I_simp, X_simp, f_calls_simp = eval_composite_simpsons(4, 0, 1, f)
+
+    print(f"The integral evaluates to approximately: {I_simp}")
+
+    return
+
 
 
 
@@ -99,3 +119,4 @@ def eval_composite_simpsons(M,a,b,f):
 
 
 prob1()
+prob2()
