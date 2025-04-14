@@ -339,7 +339,7 @@ def linConditioningTests():
     axes[0,0].set_ylabel("y")
     axes[0,0].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~N(0, 4)$")
 
-    axes[0,1].scatter(x_noise, lin_noisy_n, color='black', marker='o', label='Noisy Data')
+    axes[0,1].scatter(x_noise, lin_noisy_u, color='black', marker='o', label='Noisy Data')
     axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
     axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approximation: $f(x) = {a_uni[1]:.2f}x + {a_uni[0]:.2f}$")
     axes[0,1].legend()
@@ -486,7 +486,7 @@ def linConditioningTests():
 
     axes[0,1].scatter(x_noise25, lin_noisy25, color='black', marker='o', label='Noisy Data')
     axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
-    axes[0,1].plot(xevals, DLS_5_eval, color='red', label=f"LS Approximation: $f(x) = {a_25[1]:.2f}x + {a_25[0]:.2f}$")
+    axes[0,1].plot(xevals, DLS_25_eval, color='red', label=f"LS Approximation: $f(x) = {a_25[1]:.2f}x + {a_25[0]:.2f}$")
     axes[0,1].legend()
     axes[0,1].set_xlabel("x")
     axes[0,1].set_ylabel("y")
@@ -517,18 +517,6 @@ def linConditioningTests():
 
     plt.tight_layout()
     plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     return
@@ -721,6 +709,268 @@ def polyConditioningTests():
     plt.tight_layout()
     plt.show()
 
+    
+
+    #################################################################################################################################
+    # For the second part of our senesitivity analysis, we are going to focus on how the input data affects Polynomial DLS. We'll compare
+    # different types of noise, levels of noise, and number of data points for a linear fit DLS model. For all of these we will use
+    # the QR factorization model to reduce the impact of conditioning on the sensitvity so we can focus more on the data itself.
+    #################################################################################################################################
+
+    # For these examples we'll use a degree 3 polynomial, so that the conditioning doesn't have too much effect on the sensitiviy
+    poly3 = lambda x: .1*(x-1)**3
+
+    ############################################################################################
+    # Comparing Uniform and Normal homoskedastic noise, both large levels, and using 50 points
+    ############################################################################################
+
+    # generate both types of noise
+    x_noise, poly_noisy_n = genNoisyFunc(poly3, 'n', 'l', -5, 5, 50)
+    x_noise, poly_noisy_u = genNoisyFunc(poly3, 'u', 'l', -5, 5, 50)
+
+    # perform DLS
+    a_norm, M_norm, k_norm = LSqr_polyfit(x_noise, poly_noisy_n, 3)
+    a_uni, M_uni, k_uni = LSqr_polyfit(x_noise, poly_noisy_u, 3)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_norm = lambda x: a_norm[0] + a_norm[1]*x + a_norm[2]*x**2 + a_norm[3]*x**3
+    DLS_uni = lambda x: a_uni[0] + a_uni[1]*x + a_uni[2]*x**2 + a_uni[3]*x**3
+
+    # define error functions to allow for smooth error plotting
+    err_norm = lambda x: abs(poly3(x) - DLS_norm(x))
+    err_uni = lambda x: abs(poly3(x) - DLS_uni(x))
+
+    # Evaluate functions for plotting
+    xevals = np.linspace(-5, 5, 1000)
+
+    feval = poly3(xevals)
+    DLS_n_eval = DLS_norm(xevals)
+    DLS_u_eval = DLS_uni(xevals)
+    err_n_eval = err_norm(xevals)
+    err_u_eval = err_uni(xevals)
+
+    # Plot results:
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Normal and Uniform Noise')
+
+    axes[0,0].scatter(x_noise, poly_noisy_n, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,0].plot(xevals, DLS_n_eval, color='red', label=f"LS Approximation")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(f"$f(x) = .1(x -1)^3 + \\epsilon | \\epsilon~N(0, 9)$")
+
+    axes[0,1].scatter(x_noise, poly_noisy_u, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approximation")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-3, 3)$")
+
+    axes[1,0].plot(xevals, err_n_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using Normal Noise")
+
+    axes[1,1].plot(xevals, err_u_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using Uniform Noise")
+
+    plt.tight_layout()
+    plt.show()
+
+    
+    ########################################################
+    # Comparing Uniform noise at three levels and 50 points
+    ########################################################
+
+    # generate noisy data at each level:
+    x_noise, poly_noisy_s = genNoisyFunc(poly3, 'u', 's', -5, 5, 50, 2)
+    x_noise, poly_noisy_m = genNoisyFunc(poly3, 'u', 'm', -5, 5, 50, 2)
+    x_noise, poly_noisy_l = genNoisyFunc(poly3, 'u', 'l', -5, 5, 50, 2)
+
+    # Perform DLS
+    a_s, Ms, k_s = LSqr_polyfit(x_noise, poly_noisy_s, 3)
+    a_m, Mm, k_m = LSqr_polyfit(x_noise, poly_noisy_m, 3)
+    a_l, Ml, k_l = LSqr_polyfit(x_noise, poly_noisy_l, 3)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_s = lambda x: a_s[0] + a_s[1]*x + a_s[2]*x**2 + a_s[3]*x**3
+    DLS_m = lambda x: a_m[0] + a_m[1]*x + a_m[2]*x**2 + a_m[3]*x**3
+    DLS_l = lambda x: a_l[0] + a_l[1]*x + a_l[2]*x**2 + a_l[3]*x**3
+
+    # define error functions to allow for smooth error plotting
+    err_s = lambda x: abs(poly3(x) - DLS_s(x))
+    err_m = lambda x: abs(poly3(x) - DLS_m(x))
+    err_l = lambda x: abs(poly3(x) - DLS_l(x))
+    
+
+    # Evaluate functions for plotting
+    DLS_s_eval = DLS_s(xevals)
+    DLS_m_eval = DLS_m(xevals)
+    DLS_l_eval = DLS_l(xevals)
+    err_s_eval = err_s(xevals)
+    err_m_eval = err_m(xevals)
+    err_l_eval = err_l(xevals)
+
+    # Plot results:
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Uniform Noise at Different Levels')
+
+    axes[0,0].scatter(x_noise, poly_noisy_s, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,0].plot(xevals, DLS_s_eval, color='red', label=f"LS Approximation")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-2,2)$")
+
+    axes[0,1].scatter(x_noise, poly_noisy_m, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,1].plot(xevals, DLS_m_eval, color='red', label=f"LS Approximation")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-4,4)$")
+
+    axes[0,2].scatter(x_noise, poly_noisy_l, color='black', marker='o', label='Noisy Data')
+    axes[0,2].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,2].plot(xevals, DLS_l_eval, color='red', label=f"LS Approximation")
+    axes[0,2].legend()
+    axes[0,2].set_xlabel("x")
+    axes[0,2].set_ylabel("y")
+    axes[0,2].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-6,6)$")
+
+    axes[1,0].plot(xevals, err_s_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using 'Small' Uniform Noise")
+
+    axes[1,1].plot(xevals, err_m_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using 'Medium' Uniform Noise")
+
+    axes[1,2].plot(xevals, err_l_eval, color='red')
+    axes[1,2].set_xlabel("x")
+    axes[1,2].set_ylabel("Absolute Error")
+    axes[1,2].set_title(f"Absoulte Error of DLS using 'Large' Uniform Noise")
+
+    plt.tight_layout()
+    plt.show()
+
+    #Plot to show how error extends to extrapolation:
+    xevals2 = np.linspace(-50, 50, 1000)
+    feval2 = poly3(xevals2)
+
+    DLS_extrapolation = DLS_l(xevals2)
+    err_l2_eval = err_l(xevals2)
+
+    #plot of extrapolation and error:
+    fig, axes = plt.subplots(1, 2, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Uniform Noise at Different Levels')
+
+    axes[0].scatter(x_noise, poly_noisy_l, color='black', marker='o', label='Noisy Data')
+    axes[0].plot(xevals2, feval2, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0].plot(xevals2, DLS_extrapolation, color='red', label=f"LS Extrapolation")
+    axes[0].legend()
+    axes[0].set_xlabel("x")
+    axes[0].set_ylabel("y")
+    axes[0].set_title(f"Extrapolated DLS Model")
+
+    axes[1].plot(xevals2, err_l2_eval, color='red')
+    axes[1].set_xlabel("x")
+    axes[1].set_ylabel("Absolute Error")
+    axes[1].set_title(f"Absoulte Error of Extrapolated DLS Model")
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+    ###################################################################################
+    # Comparison of DLS using different numbers of data points and Uniform Large Noise
+    ###################################################################################
+
+    # Generate noisy data:
+    x_noise5, poly_noisy5 = genNoisyFunc(poly3, 'u', 'm', -5, 5, 5, 2)
+    x_noise25, poly_noisy25 = genNoisyFunc(poly3, 'u', 'm', -5, 5, 25, 2)
+    x_noise125, poly_noisy125 = genNoisyFunc(poly3, 'u', 'm', -5, 5, 125, 2)
+
+    # Perform DLS
+    a_5, M5, k_5 = LSqr_polyfit(x_noise5, poly_noisy5, 3)
+    a_25, M5, k_25 = LSqr_polyfit(x_noise25, poly_noisy25, 3)
+    a_125, M5, k_125= LSqr_polyfit(x_noise125, poly_noisy125, 3)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_5 = lambda x: a_5[0] + a_5[1]*x + a_5[2]*x**2 + a_5[3]*x**3
+    DLS_25 = lambda x: a_25[0] + a_25[1]*x + a_25[2]*x**2 + a_25[3]*x**3
+    DLS_125 = lambda x: a_125[0] + a_125[1]*x + a_125[2]*x**2 + a_125[3]*x**3
+
+    # define error functions to allow for smooth error plotting
+    err_5 = lambda x: abs(poly3(x) - DLS_5(x))
+    err_25 = lambda x: abs(poly3(x) - DLS_25(x))
+    err_125 = lambda x: abs(poly3(x) - DLS_125(x))
+    
+    # evaluate functions for plotting
+    DLS_5_eval = DLS_5(xevals)
+    DLS_25_eval = DLS_25(xevals)
+    DLS_125_eval = DLS_125(xevals)
+    err_5_eval = err_5(xevals)
+    err_25_eval = err_25(xevals)
+    err_125_eval = err_125(xevals)
+
+    # Plot results:
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig.suptitle(f'Comparison of DLS with Increasing Data Points')
+
+    axes[0,0].scatter(x_noise5, poly_noisy5, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,0].plot(xevals, DLS_5_eval, color='red', label=f"LS Approximation")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(f"Linear DLS Using 5 Nodes")
+
+    axes[0,1].scatter(x_noise25, poly_noisy25, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,1].plot(xevals, DLS_25_eval, color='red', label=f"LS Approximation")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(f"Linear DLS Using 25 Nodes")
+
+    axes[0,2].scatter(x_noise125, poly_noisy125, color='black', marker='o', label='Noisy Data')
+    axes[0,2].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,2].plot(xevals, DLS_125_eval, color='red', label=f"LS Approximation")
+    axes[0,2].legend()
+    axes[0,2].set_xlabel("x")
+    axes[0,2].set_ylabel("y")
+    axes[0,2].set_title(f"Linear DLS Using 125 Nodes")
+
+    axes[1,0].plot(xevals, err_5_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using 5 Nodes")
+
+    axes[1,1].plot(xevals, err_25_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using 25 Nodes")
+
+    axes[1,2].plot(xevals, err_125_eval, color='red')
+    axes[1,2].set_xlabel("x")
+    axes[1,2].set_ylabel("Absolute Error")
+    axes[1,2].set_title(f"Absoulte Error of DLS using 125 Nodes")
+
+    plt.tight_layout()
+    plt.show()
+    
+    
+    
 
     return
 
@@ -826,7 +1076,7 @@ def LSqr_polyfit(xi,yi,k):
     return (a,M, cond)
 
 
-def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points):
+def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points, multiplier=1):
 
     """
     Generate noisy function 
@@ -836,6 +1086,7 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
     * left_bound: left bound of where you are taking data points from
     * right_bound: right bound of where you are taking data points from
     * num_points: number of "noisy" data points you want to consider (equispaced from left to right bound)
+    * multiplier: can be used if standard "levels" are dramatic enough
     
     Returns: [xvals, yvals]
     - xvals: the xvalues the function was evaluated at
@@ -853,11 +1104,11 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
 
         #check for noise level (changing variance for 's', 'm', 'l')
         if noise_level == 's':
-            noise = rng.normal(0, 1, num_points)
+            noise = rng.normal(0, 1*multiplier, num_points)
         elif noise_level == 'm':
-            noise = rng.normal(0, 2, num_points)
+            noise = rng.normal(0, 2*multiplier, num_points)
         elif noise_level == 'l':
-            noise = rng.normal(0, 3, num_points)
+            noise = rng.normal(0, 3*multiplier, num_points)
         elif noise_level == 'p':
             # special case where the noise is scaled proportionally to the x value: start with 's' noise level then scale\
             noise = rng.normal(0, 1, num_points)
@@ -869,11 +1120,11 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
 
         #check for noise level (changing variance for 's', 'm', 'l')
         if noise_level == 's':
-            noise = rng.uniform(-1,1, num_points)
+            noise = rng.uniform(-1*multiplier,1*multiplier, num_points)
         elif noise_level == 'm':
-            noise = rng.uniform(-2,2, num_points)
+            noise = rng.uniform(-2*multiplier,2*multiplier, num_points)
         elif noise_level == 'l':
-            noise = rng.uniform(-3,3, num_points)
+            noise = rng.uniform(-3*multiplier,3*multiplier, num_points)
         elif noise_level == 'p':
             # special case where the noise is scaled proportionally to the x value: start with 's' noise level then scale\
             noise = rng.uniform(-1,1)
@@ -892,11 +1143,9 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
 
 
 
-
-
 #driver()
 linConditioningTests()
-#polyConditioningTests()
+polyConditioningTests()
 
 
 
