@@ -192,15 +192,127 @@ def driver():
         plt.tight_layout()
         plt.show()
 
-
-
-    
-    
+    return
 
 
 
+def linConditioningTests():
 
-        
+    #######################################################################################################################################
+    # To analyze the conditioning of linear fit DLS we'll analyse the condition number of a Linear fit DLS model using an increasing amount
+    # of data points with random noise added to each. We'll also compare the average error in the coeffiecients produced by DLS.
+    ########################################################################################################################################
+
+    lin_ex = lambda x: x + 3
+
+    # arrays to store condition numbers and coefficient differences:
+    reg_conditions = np.zeros(100)
+    reg_coef_diff = np.zeros(100)
+    QR_conditions = np.zeros(100)
+    QR_coef_diff = np.zeros(100)
+
+    for i in range(100): # iterator for different number of data points
+
+        # generate noisy data
+        [x_noise, lin_noisy] = genNoisyFunc(lin_ex, 'n', 'm', -50, 50, i*10 + 10)
+
+        #perform standard DLS fit
+        a_reg, k_reg = LS_linfit(x_noise, lin_noisy)
+
+        #perform DLS QR fit
+        a_QR, k_QR = LSqr_linfit(x_noise, lin_noisy)
+
+        # add condition numbers to arrays
+        reg_conditions[i] = k_reg
+        QR_conditions[i] = k_QR
+
+        # Store sampled coefficient differences to be averaged
+        sample_reg_coef = np.zeros(100)
+        sample_QR_coef = np.zeros(100)
+
+        # compute average coefficient difference by sampling 100 times at current number of data points and computing the average value
+        for j in range(100):
+
+            # generate noisy data
+            [sample_x_noise, sample_lin_noisy] = genNoisyFunc(lin_ex, 'n', 'm', -50, 50, i*10 + 10)
+
+            #perform standard DLS fit
+            sample_a_reg, _sample_k_reg = LS_linfit(sample_x_noise, sample_lin_noisy)
+
+            #perform DLS QR fit
+            sample_a_QR, sample_k_QR = LSqr_linfit(sample_x_noise, sample_lin_noisy)
+
+            sample_reg_avg = (abs(sample_a_reg[0] - 3) + abs(sample_a_reg[1] - 1))/2
+            sample_QR_avg = (abs(sample_a_QR[0] -3) + abs(sample_a_QR[1] -1 ))/2
+
+            sample_reg_coef[j] = sample_reg_avg
+            sample_QR_coef[j] = sample_QR_avg
+
+        #compute total average of coefficient differences across all samples for current number of data points and add to arrays
+        reg_coef_diff[i] = sum(sample_reg_coef)/100
+        QR_coef_diff[i] = sum(sample_QR_coef)/100
+
+
+    #create x values for plotting
+    xvals = np.linspace(10, 1000, 100)
+
+    # Standard DLS
+    fig, axes = plt.subplots(1, 2, figsize=(12, 8))
+    fig.suptitle(f"Standard Linear fit DLS on Noisy Function: $f(x) = (x + 3) + \\epsilon$")
+
+    axes[0].scatter(xvals, reg_conditions, color='black', marker='o')
+    axes[0].set_ylabel('Condition Number')
+    axes[0].set_xlabel('Number of Data Points Used')
+    axes[0].set_title('Condition Number of DLS by Data Points Used')
+
+    axes[1].scatter(xvals, reg_coef_diff, color='black', marker='o')
+    axes[1].set_ylabel('Average Difference Between DLS and Exact Coefficients')
+    axes[1].set_xlabel('Number of Data Points Used')
+    axes[1].set_title('Average Error in Coefficients Using DLS')
+
+    plt.tight_layout()
+    plt.show()
+
+    # QR DLS
+    fig, axes = plt.subplots(1, 2, figsize=(12, 8))
+    fig.suptitle(f"QR Factored Linear fit DLS on Noisy Function: $f(x) = (x + 3) + \\epsilon$")
+
+    axes[0].scatter(xvals, QR_conditions, color='black', marker='o')
+    axes[0].set_ylabel('Condition Number')
+    axes[0].set_xlabel('Number of Data Points Used')
+    axes[0].set_title('Condition Number of DLS by Data Points Used')
+
+    axes[1].scatter(xvals, QR_coef_diff, color='black', marker='o')
+    axes[1].set_ylabel('Average Difference Between DLS and Exact Coefficients')
+    axes[1].set_xlabel('Number of Data Points Used')
+    axes[1].set_title('Average Error in Coefficients Using DLS')
+
+    plt.tight_layout()
+    plt.show()
+
+
+    #################################################################################################################################
+    # For the second part of our senesitivity analysis, we are going to focus on how the input data affects Linear DLS. We'll compare
+    # different types of noise, levels of noise, and number of data points for a linear fit DLS model. For all of these we will use
+    # the QR factorization model to reduce the impact of conditioning on the sensitvity so we can focus more on the data itself.
+    #################################################################################################################################
+
+
+    ############################################################################################
+    # Comparing Uniform and Normal homoskedastic noise, both medium levels, and using 100 points
+    ############################################################################################
+
+    # generate both types of noise
+    x_noise, lin_noisy_n = genNoisyFunc(lin_ex, 'n', 'm', -10, 10, 100)
+    x_noise, lin_noisy_u = genNoisyFunc(lin_ex, 'u', 'm', -10, 10, 100)
+
+    # perform DLS
+    a_norm, k_norm = LSqr_linfit(x_noise, lin_noisy_n)
+    a_uni, k_uni = LSqr_linfit(x_noise, lin_noisy_u)
+
+    # define functions based of least squares results to 
+
+
 
 
 
@@ -212,6 +324,200 @@ def driver():
 
 
     return
+    
+
+def polyConditioningTests():
+
+    #######################################################################################################################################
+    # Even though the condition number for linear DLS is high, the numerical differences between QR and Standard DLS are not very large for 
+    # linear data with homoskedastic noise. To better see the effects of a high condition number on the sensitivity of DLS we'll perform a 
+    # similar experiment on noisy polynomial data of increasing degrees.
+    #######################################################################################################################################
+
+    # definging polynomials of varying degrees to test
+    poly2 = lambda x: (x-1)**2
+    poly5 = lambda x: (x-1)**5
+    poly9 = lambda x: (x-1)**9
+
+    # arrays to store condition numbers and coefficient differences:
+    reg_conditions2 = np.zeros(100)
+    reg_coef_diff2 = np.zeros(100)
+    reg_conditions5 = np.zeros(100)
+    reg_coef_diff5 = np.zeros(100)
+    reg_conditions9 = np.zeros(100)
+    reg_coef_diff9 = np.zeros(100)
+
+    QR_conditions2 = np.zeros(100)
+    QR_coef_diff2 = np.zeros(100)
+    QR_conditions5 = np.zeros(100)
+    QR_coef_diff5 = np.zeros(100)
+    QR_conditions9 = np.zeros(100)
+    QR_coef_diff9 = np.zeros(100)
+
+    for i in range(100): # iterator for different number of data points
+
+        # generate noisy data for each polynomial
+        [x_noise2, poly_noisy2] = genNoisyFunc(poly2, 'n', 'm', -1, 1, i + 10)
+        [x_noise5, poly_noisy5] = genNoisyFunc(poly5, 'n', 'm', -1, 1, i + 10)
+        [x_noise9, poly_noisy9] = genNoisyFunc(poly9, 'n', 'm', -1, 1, i + 10)
+
+        #perform standard DLS fit
+        a_reg2, M_reg2 ,k_reg2 = LS_polyfit(x_noise2, poly_noisy2, 2)
+        a_reg5, M_reg5 ,k_reg5 = LS_polyfit(x_noise5, poly_noisy5, 5)
+        a_reg9, M_reg9 ,k_reg9 = LS_polyfit(x_noise9, poly_noisy9, 9)
+
+        #perform DLS QR fit
+        a_QR2, M_QR2, k_QR2 = LSqr_polyfit(x_noise2, poly_noisy2, 2)
+        a_QR5, M_QR5, k_QR5 = LSqr_polyfit(x_noise5, poly_noisy5, 5)
+        a_QR9, M_QR9, k_QR9 = LSqr_polyfit(x_noise9, poly_noisy9, 9)
+
+        # add condition numbers to arrays
+        reg_conditions2[i] = k_reg2
+        reg_conditions5[i] = k_reg5
+        reg_conditions9[i] = k_reg9
+
+        QR_conditions2[i] = k_QR2
+        QR_conditions5[i] = k_QR5
+        QR_conditions9[i] = k_QR9
+
+        # Store sampled coefficient differences to be averaged
+        sample_reg_coef2 = np.zeros(100)
+        sample_reg_coef5 = np.zeros(100)
+        sample_reg_coef9 = np.zeros(100)
+
+        sample_QR_coef2 = np.zeros(100)
+        sample_QR_coef5 = np.zeros(100)
+        sample_QR_coef9 = np.zeros(100)
+
+        # compute average coefficient difference by sampling 100 times at current number of data points and computing the average value
+        for j in range(100):
+
+            # generate noisy data
+            [sample_x_noise, sample_poly_noisy2] = genNoisyFunc(poly2, 'n', 'm', -1, 1, i + 10)
+            [sample_x_noise, sample_poly_noisy5] = genNoisyFunc(poly5, 'n', 'm', -1, 1, i + 10)
+            [sample_x_noise, sample_poly_noisy9] = genNoisyFunc(poly9, 'n', 'm', -1, 1, i + 10)
+
+            #perform standard DLS fit
+            sample_a_reg2, sample_reg_M2 ,sample_k_reg2 = LS_polyfit(sample_x_noise, sample_poly_noisy2, 2)
+            sample_a_reg5, sample_reg_M5 ,sample_k_reg5 = LS_polyfit(sample_x_noise, sample_poly_noisy5, 5)
+            sample_a_reg9, sample_reg_M9 ,sample_k_reg9 = LS_polyfit(sample_x_noise, sample_poly_noisy9, 9)
+
+            #perform DLS QR fit
+            sample_a_QR2, sample_QR_M2 ,sample_k_QR2 = LSqr_polyfit(sample_x_noise, sample_poly_noisy2, 2)
+            sample_a_QR5, sample_QR_M5 ,sample_k_QR5 = LSqr_polyfit(sample_x_noise, sample_poly_noisy5, 5)
+            sample_a_QR9, sample_QR_M9 ,sample_k_QR9 = LSqr_polyfit(sample_x_noise, sample_poly_noisy9, 9)
+
+            # Compute average coefficient differences for each polynomial
+            sample_reg_avg2 = (abs(sample_a_reg2[0] - 1) + abs(sample_a_reg2[1] + 2) + abs(sample_a_reg2[2] - 1))/3
+            sample_reg_avg5 = (abs(sample_a_reg5[0] + 1) + abs(sample_a_reg5[1] - 5) + abs(sample_a_reg5[2] + 10) + abs(sample_a_reg5[3] - 10) + abs(sample_a_reg5[4] + 5) + abs(sample_a_reg5[5] - 1))/5
+            sample_reg_avg9 = (abs(sample_a_reg9[0] + 1) + abs(sample_a_reg9[1] - 9) + abs(sample_a_reg9[2] + 36) + abs(sample_a_reg9[3] - 84) + abs(sample_a_reg9[4] + 126) + abs(sample_a_reg9[5] - 126) + abs(sample_a_reg9[6] + 84) + abs(sample_a_reg9[7] - 36) + abs(sample_a_reg9[8] + 9) + abs(sample_a_reg9[9] - 1))/9
+
+            sample_QR_avg2 = (abs(sample_a_QR2[0] - 1) + abs(sample_a_QR2[1] - 1) + abs(sample_a_QR2[2] - 2))/3
+            sample_QR_avg5 = (abs(sample_a_QR5[0] - 1) + abs(sample_a_QR5[1] - 1) + abs(sample_a_QR5[2] - 2) + abs(sample_a_QR5[3] - 3) + abs(sample_a_QR5[4] - 4) + abs(sample_a_QR5[5] - 5))/5
+            sample_QR_avg9 = (abs(sample_a_QR9[0] + 1) + abs(sample_a_QR9[1] - 9) + abs(sample_a_QR9[2] + 36) + abs(sample_a_QR9[3] - 84) + abs(sample_a_QR9[4] + 126) + abs(sample_a_QR9[5] - 126) + abs(sample_a_QR9[6] + 84) + abs(sample_a_QR9[7] - 36) + abs(sample_a_QR9[8] + 9) + abs(sample_a_QR9[9] - 1))/9
+
+            # add sampled averages to arrays
+            sample_reg_coef2[j] = sample_reg_avg2
+            sample_reg_coef5[j] = sample_reg_avg5
+            sample_reg_coef9[j] = sample_reg_avg9
+
+            sample_QR_coef2[j] = sample_QR_avg2
+            sample_QR_coef5[j] = sample_QR_avg5
+            sample_QR_coef9[j] = sample_QR_avg9
+
+        #compute total average of coefficient differences across all samples for current number of data points and add to arrays
+        reg_coef_diff2[i] = sum(sample_reg_coef2)/100
+        reg_coef_diff5[i] = sum(sample_reg_coef5)/100
+        reg_coef_diff9[i] = sum(sample_reg_coef9)/100
+
+        QR_coef_diff2[i] = sum(sample_QR_coef2)/100
+        QR_coef_diff5[i] = sum(sample_QR_coef5)/100
+        QR_coef_diff9[i] = sum(sample_QR_coef9)/100
+
+
+    #create x values for plotting
+    xvals = np.linspace(10, 110, 100)
+
+    # Standard DLS
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig.suptitle(f"Conditioning and Error for Standard Polynomial DLS of Varying Degrees")
+
+    axes[0,0].scatter(xvals, reg_conditions2, color='black', marker='o')
+    axes[0,0].set_ylabel('Condition Number')
+    axes[0,0].set_xlabel('Number of Data Points Used')
+    axes[0,0].set_title(f'Condition Number for Degree 2 Polynomial Fit')
+
+    axes[1,0].scatter(xvals, reg_coef_diff2, color='black', marker='o')
+    axes[1,0].set_ylabel('Average Error Between DLS and Exact Coefficients')
+    axes[1,0].set_xlabel('Number of Data Points Used')
+    axes[1,0].set_title('Average Error in Coefficients (Degree 2)')
+
+    axes[0,1].scatter(xvals, reg_conditions5, color='black', marker='o')
+    axes[0,1].set_ylabel('Condition Number')
+    axes[0,1].set_xlabel('Number of Data Points Used')
+    axes[0,1].set_title(f'Condition Number for Degree 5 Polynomial Fit')
+
+    axes[1,1].scatter(xvals, reg_coef_diff5, color='black', marker='o')
+    axes[1,1].set_ylabel('Average Error Between DLS and Exact Coefficients')
+    axes[1,1].set_xlabel('Number of Data Points Used')
+    axes[1,1].set_title('Average Error in Coefficients (Degree 5)')
+
+    axes[0,2].scatter(xvals, reg_conditions9, color='black', marker='o')
+    axes[0,2].set_ylabel('Condition Number')
+    axes[0,2].set_xlabel('Number of Data Points Used')
+    axes[0,2].set_title(f'Condition Number for Degree 9 Polynomial Fit')
+
+    axes[1,2].scatter(xvals, reg_coef_diff9, color='black', marker='o')
+    axes[1,2].set_ylabel('Average Error Between DLS and Exact Coefficients')
+    axes[1,2].set_xlabel('Number of Data Points Used')
+    axes[1,2].set_title('Average Error in Coefficients (Degree 9)')
+
+    plt.tight_layout()
+    plt.show()
+
+
+    # QR factored DLS
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig.suptitle(f"Conditioning and Error for QR Factored Polynomial DLS of Varying Degrees")
+
+    axes[0,0].scatter(xvals, QR_conditions2, color='black', marker='o')
+    axes[0,0].set_ylabel('Condition Number')
+    axes[0,0].set_xlabel('Number of Data Points Used')
+    axes[0,0].set_title(f'Condition Number for Degree 2 Polynomial Fit')
+
+    axes[1,0].scatter(xvals, QR_coef_diff2, color='black', marker='o')
+    axes[1,0].set_ylabel('Average Error Between DLS and Exact Coefficients')
+    axes[1,0].set_xlabel('Number of Data Points Used')
+    axes[1,0].set_title('Average Error in Coefficients (Degree 2)')
+
+    axes[0,1].scatter(xvals, QR_conditions5, color='black', marker='o')
+    axes[0,1].set_ylabel('Condition Number')
+    axes[0,1].set_xlabel('Number of Data Points Used')
+    axes[0,1].set_title(f'Condition Number for Degree 5 Polynomial Fit')
+
+    axes[1,1].scatter(xvals, QR_coef_diff5, color='black', marker='o')
+    axes[1,1].set_ylabel('Average Error Between DLS and Exact Coefficients')
+    axes[1,1].set_xlabel('Number of Data Points Used')
+    axes[1,1].set_title('Average Error in Coefficients (Degree 5)')
+
+    axes[0,2].scatter(xvals, QR_conditions9, color='black', marker='o')
+    axes[0,2].set_ylabel('Condition Number')
+    axes[0,2].set_xlabel('Number of Data Points Used')
+    axes[0,2].set_title(f'Condition Number for Degree 9 Polynomial Fit')
+
+    axes[1,2].scatter(xvals, QR_coef_diff9, color='black', marker='o')
+    axes[1,2].set_ylabel('Average Error Between DLS and Exact Coefficients')
+    axes[1,2].set_xlabel('Number of Data Points Used')
+    axes[1,2].set_title('Average Error in Coefficients (Degree 9)')
+
+    plt.tight_layout()
+    plt.show()
+
+
+    return
+
+
+        
 
 # Linear LS solving normal equations directly
 def LS_linfit(xi,yi):
@@ -232,7 +538,7 @@ def LS_linfit(xi,yi):
     U, sig, V = np.linalg.svd(N)
 
     # take ratio of largest and smallest singular values
-    cond = (sig[0,0]) / (sig[1,1])
+    cond = (sig[0]) / (sig[-1])
 
     return a, cond
 
@@ -257,7 +563,7 @@ def LSqr_linfit(xi,yi):
     U, sig, V = np.linalg.svd(R)
 
     # take ratio of largest and smallest singular values
-    cond = (sig[0,0]) / (sig[1,1])
+    cond = (sig[0]) / (sig[-1])
 
     return a, cond
 
@@ -282,7 +588,7 @@ def LS_polyfit(xi,yi,k):
     U, sig, V = np.linalg.svd(N)
 
     # take ratio of largest and smallest singular values
-    cond = (sig[0,0]) / (sig[k-1,k-1])
+    cond = (sig[0]) / (sig[-1])
 
     return (a,M, cond)
 
@@ -307,7 +613,7 @@ def LSqr_polyfit(xi,yi,k):
     U, sig, V = np.linalg.svd(R)
 
     # take ratio of largest and smallest singular values
-    cond = (sig[0,0]) / (sig[k-1,k-1])
+    cond = (sig[0]) / (sig[-1])
 
     return (a,M, cond)
 
@@ -380,7 +686,9 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
 
 
 
-driver()
+#driver()
+#linConditioningTests()
+polyConditioningTests()
 
 
 
