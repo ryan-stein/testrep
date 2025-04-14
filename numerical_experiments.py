@@ -360,6 +360,88 @@ def linConditioningTests():
     plt.tight_layout()
     plt.show()
 
+    ########################################################
+    # Comparing Uniform noise at three levels and 100 points
+    ########################################################
+
+    # generate noisy data at each level:
+    x_noise, lin_noisy_s = genNoisyFunc(lin_ex, 'u', 's', -10, 10, 100)
+    x_noise, lin_noisy_m = genNoisyFunc(lin_ex, 'u', 'm', -10, 10, 100)
+    x_noise, lin_noisy_l = genNoisyFunc(lin_ex, 'u', 'l', -10, 10, 100)
+
+    # Perform DLS
+    a_s, k_s = LSqr_linfit(x_noise, lin_noisy_s)
+    a_m, k_m = LSqr_linfit(x_noise, lin_noisy_m)
+    a_l, k_l = LSqr_linfit(x_noise, lin_noisy_l)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_s = lambda x: a_s[0] + a_s[1]*x
+    DLS_m = lambda x: a_m[0] + a_m[1]*x
+    DLS_l = lambda x: a_l[0] + a_l[1]*x
+
+    # define error functions to allow for smooth error plotting
+    err_s = lambda x: abs(lin_ex(x) - DLS_s(x))
+    err_m = lambda x: abs(lin_ex(x) - DLS_m(x))
+    err_l = lambda x: abs(lin_ex(x) - DLS_l(x))
+    
+
+    # Evaluate functions for plotting
+    xevals = np.linspace(-10, 10, 1000)
+
+    feval = lin_ex(xevals)
+    DLS_s_eval = DLS_s(xevals)
+    DLS_m_eval = DLS_m(xevals)
+    DLS_l_eval = DLS_l(xevals)
+    err_s_eval = err_s(xevals)
+    err_m_eval = err_m(xevals)
+    err_l_eval = err_l(xevals)
+
+    # Plot results:
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Uniform Noise at Different Levels')
+
+    axes[0,0].scatter(x_noise, lin_noisy_s, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,0].plot(xevals, DLS_s_eval, color='red', label=f"LS Approximation: $f(x) = {a_s[1]:.2f}x + {a_s[0]:.2f}$")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-1,1)$")
+
+    axes[0,1].scatter(x_noise, lin_noisy_m, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,1].plot(xevals, DLS_m_eval, color='red', label=f"LS Approximation: $f(x) = {a_m[1]:.2f}x + {a_m[0]:.2f}$")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-2,2)$")
+
+    axes[0,2].scatter(x_noise, lin_noisy_l, color='black', marker='o', label='Noisy Data')
+    axes[0,2].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,2].plot(xevals, DLS_l_eval, color='red', label=f"LS Approximation: $f(x) = {a_l[1]:.2f}x + {a_l[0]:.2f}$")
+    axes[0,2].legend()
+    axes[0,2].set_xlabel("x")
+    axes[0,2].set_ylabel("y")
+    axes[0,2].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-3,3)$")
+
+    axes[1,0].plot(xevals, err_s_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using 'Small' Uniform Noise")
+
+    axes[1,1].plot(xevals, err_m_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using 'Medium' Uniform Noise")
+
+    axes[1,2].plot(xevals, err_l_eval, color='red')
+    axes[1,2].set_xlabel("x")
+    axes[1,2].set_ylabel("Absolute Error")
+    axes[1,2].set_title(f"Absoulte Error of DLS using 'Large' Uniform Noise")
+
+    plt.tight_layout()
+    plt.show()
+
 
 
 
