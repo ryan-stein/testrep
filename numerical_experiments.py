@@ -386,9 +386,6 @@ def linConditioningTests():
     
 
     # Evaluate functions for plotting
-    xevals = np.linspace(-10, 10, 1000)
-
-    feval = lin_ex(xevals)
     DLS_s_eval = DLS_s(xevals)
     DLS_m_eval = DLS_m(xevals)
     DLS_l_eval = DLS_l(xevals)
@@ -441,6 +438,89 @@ def linConditioningTests():
 
     plt.tight_layout()
     plt.show()
+
+
+    ###################################################################################
+    # Comparison of DLS using different numbers of data points and Uniform Medium Noise
+    ###################################################################################
+
+    # Generate noisy data:
+    x_noise5, lin_noisy5 = genNoisyFunc(lin_ex, 'u', 'm', -10, 10, 5)
+    x_noise25, lin_noisy25 = genNoisyFunc(lin_ex, 'u', 'm', -10, 10, 25)
+    x_noise125, lin_noisy125 = genNoisyFunc(lin_ex, 'u', 'm', -10, 10, 125)
+
+    # Perform DLS
+    a_5, k_5 = LSqr_linfit(x_noise5, lin_noisy5)
+    a_25, k_25 = LSqr_linfit(x_noise25, lin_noisy25)
+    a_125, k_125= LSqr_linfit(x_noise125, lin_noisy125)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_5 = lambda x: a_5[0] + a_5[1]*x
+    DLS_25 = lambda x: a_25[0] + a_25[1]*x
+    DLS_125 = lambda x: a_125[0] + a_125[1]*x
+
+    # define error functions to allow for smooth error plotting
+    err_5 = lambda x: abs(lin_ex(x) - DLS_5(x))
+    err_25 = lambda x: abs(lin_ex(x) - DLS_25(x))
+    err_125 = lambda x: abs(lin_ex(x) - DLS_125(x))
+    
+    # evaluate functions for plotting
+    DLS_5_eval = DLS_5(xevals)
+    DLS_25_eval = DLS_25(xevals)
+    DLS_125_eval = DLS_125(xevals)
+    err_5_eval = err_5(xevals)
+    err_25_eval = err_25(xevals)
+    err_125_eval = err_125(xevals)
+
+    # Plot results:
+    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
+    fig.suptitle(f'Comparison of DLS with Increasing Data Points')
+
+    axes[0,0].scatter(x_noise5, lin_noisy5, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,0].plot(xevals, DLS_5_eval, color='red', label=f"LS Approximation: $f(x) = {a_5[1]:.2f}x + {a_5[0]:.2f}$")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(f"Linear DLS Using 5 Nodes")
+
+    axes[0,1].scatter(x_noise25, lin_noisy25, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,1].plot(xevals, DLS_5_eval, color='red', label=f"LS Approximation: $f(x) = {a_25[1]:.2f}x + {a_25[0]:.2f}$")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(f"Linear DLS Using 25 Nodes")
+
+    axes[0,2].scatter(x_noise125, lin_noisy125, color='black', marker='o', label='Noisy Data')
+    axes[0,2].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,2].plot(xevals, DLS_125_eval, color='red', label=f"LS Approximation: $f(x) = {a_125[1]:.2f}x + {a_125[0]:.2f}$")
+    axes[0,2].legend()
+    axes[0,2].set_xlabel("x")
+    axes[0,2].set_ylabel("y")
+    axes[0,2].set_title(f"Linear DLS Using 125 Nodes")
+
+    axes[1,0].plot(xevals, err_5_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using 5 Nodes")
+
+    axes[1,1].plot(xevals, err_25_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using 25 Nodes")
+
+    axes[1,2].plot(xevals, err_125_eval, color='red')
+    axes[1,2].set_xlabel("x")
+    axes[1,2].set_ylabel("Absolute Error")
+    axes[1,2].set_title(f"Absoulte Error of DLS using 125 Nodes")
+
+    plt.tight_layout()
+    plt.show()
+
+
+
+
 
 
 
