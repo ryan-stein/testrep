@@ -310,9 +310,55 @@ def linConditioningTests():
     a_norm, k_norm = LSqr_linfit(x_noise, lin_noisy_n)
     a_uni, k_uni = LSqr_linfit(x_noise, lin_noisy_u)
 
-    # define functions based of least squares results to 
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_norm = lambda x: a_norm[0] + a_norm[1]*x
+    DLS_uni = lambda x: a_uni[0] + a_uni[1]*x
 
+    # define error functions to allow for smooth error plotting
+    err_norm = lambda x: abs(lin_ex(x) - DLS_norm(x))
+    err_uni = lambda x: abs(lin_ex(x) - DLS_uni(x))
 
+    # Evaluate functions for plotting
+    xevals = np.linspace(-10, 10, 1000)
+
+    feval = lin_ex(xevals)
+    DLS_n_eval = DLS_norm(xevals)
+    DLS_u_eval = DLS_uni(xevals)
+    err_n_eval = err_norm(xevals)
+    err_u_eval = err_uni(xevals)
+
+    # Plot results:
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Normal and Uniform Noise')
+
+    axes[0,0].scatter(x_noise, lin_noisy_n, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,0].plot(xevals, DLS_n_eval, color='red', label=f"LS Approximation: $f(x) = {a_norm[1]:.2f}x + {a_norm[0]:.2f}$")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~N(0, 4)$")
+
+    axes[0,1].scatter(x_noise, lin_noisy_n, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approximation: $f(x) = {a_uni[1]:.2f}x + {a_uni[0]:.2f}$")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-2, 2)$")
+
+    axes[1,0].plot(xevals, err_n_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using Normal Noise")
+
+    axes[1,1].plot(xevals, err_u_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using Uniform Noise")
+
+    plt.tight_layout()
+    plt.show()
 
 
 
@@ -687,8 +733,8 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
 
 
 #driver()
-#linConditioningTests()
-polyConditioningTests()
+linConditioningTests()
+#polyConditioningTests()
 
 
 
