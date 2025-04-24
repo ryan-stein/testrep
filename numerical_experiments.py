@@ -7,9 +7,25 @@ from scipy.special import legendre;
 from scipy.integrate import quad;
 from scipy.fftpack import dct
 rng = np.random.default_rng(seed=27)
+from matplotlib.ticker import ScalarFormatter, FuncFormatter
 
 
-def driver():
+# Global Plotting Style:
+
+plt.rcParams.update({
+    "font.family"      : "serif",
+    "font.serif"       : ["Times New Roman", "Times", "DejaVu Serif"],  # graceful fallback
+    "font.size"        : 13,
+    "axes.titlesize"   : 19,
+    "axes.labelsize"   : 17,
+    "figure.titlesize" : 24,
+    "xtick.labelsize"  : 15,
+    "ytick.labelsize"  : 15,
+    "axes.spines.top"  : False,
+    "axes.spines.right": False,
+})
+
+def driver():  # Note I started working with this originally but then changed my strategy but didn't want to delete code in case it could be useful
 
     ##############################################################################################################################
     # To test the strengths and weaknesses of each method we will test them on the data sets created from the following functions:
@@ -198,12 +214,15 @@ def driver():
 
 def linConditioningTests():
 
+
     #######################################################################################################################################
     # To analyze the conditioning of linear fit DLS we'll analyse the condition number of a Linear fit DLS model using an increasing amount
     # of data points with random noise added to each. We'll also compare the average error in the coeffiecients produced by DLS.
     ########################################################################################################################################
 
     lin_ex = lambda x: x + 3
+
+    coef = np.array([3, 1])
 
     # arrays to store condition numbers and coefficient differences:
     reg_conditions = np.zeros(100)
@@ -242,8 +261,8 @@ def linConditioningTests():
             #perform DLS QR fit
             sample_a_QR, sample_k_QR = LSqr_linfit(sample_x_noise, sample_lin_noisy)
 
-            sample_reg_avg = (abs(sample_a_reg[0] - 3) + abs(sample_a_reg[1] - 1))/2
-            sample_QR_avg = (abs(sample_a_QR[0] -3) + abs(sample_a_QR[1] -1 ))/2
+            sample_reg_avg = np.linalg.norm(coef - sample_a_reg)
+            sample_QR_avg = np.linalg.norm(coef - sample_a_QR)
 
             sample_reg_coef[j] = sample_reg_avg
             sample_QR_coef[j] = sample_QR_avg
@@ -256,23 +275,44 @@ def linConditioningTests():
     #create x values for plotting
     xvals = np.linspace(10, 1000, 100)
 
-    # Standard DLS
-    fig, axes = plt.subplots(1, 2, figsize=(12, 8))
-    fig.suptitle(f"Standard Linear fit DLS on Noisy Function: $f(x) = (x + 3) + \\epsilon$")
+    #####################
+    # Standard DLS plot
+    #####################
 
-    axes[0].scatter(xvals, reg_conditions, color='black', marker='o')
-    axes[0].set_ylabel('Condition Number')
-    axes[0].set_xlabel('Number of Data Points Used')
-    axes[0].set_title('Condition Number of DLS by Data Points Used')
+    with plt.rc_context(changeFontSize(10)): # make font size bigger
+        # figure skeleton
+        fig, axs = plt.subplots(
+            1, 2,
+            figsize=(6.8, 3), 
+            sharex=True,
+            sharey=False,
+            constrained_layout=True
+        )
 
-    axes[1].scatter(xvals, reg_coef_diff, color='black', marker='o')
-    axes[1].set_ylabel('Average Difference Between DLS and Exact Coefficients')
-    axes[1].set_xlabel('Number of Data Points Used')
-    axes[1].set_title('Average Error in Coefficients Using DLS')
+        fig.set_constrained_layout_pads(
+            w_pad  = 0.35,  # space to the figure edge (left/right)
+            h_pad  = 0.20,  # space to the figure edge (top/bottom)
+            wspace = 0.20,  # space between the two columns
+            hspace = 0.25   # not used (only one row), but harmless
+        )
 
-    plt.tight_layout()
-    plt.show()
+        fig.suptitle("Conditioning & Coefficient Error for Standard Linear DLS")
+        
 
+        lin_cond_helper(axs[0], xvals, reg_conditions,
+            y_label="condition number",
+            title="Condition Number vs. n")
+
+        lin_cond_helper(axs[1], xvals, reg_coef_diff,
+            y_label=r"mean $\| c_{true} - c_{est}\|_2$",
+            title="Coefficient Error vs. n")
+        
+        fig.savefig("lin_cond.pdf", bbox_inches="tight")
+        
+        plt.show()
+
+
+    
     # QR DLS
     fig, axes = plt.subplots(1, 2, figsize=(12, 8))
     fig.suptitle(f"QR Factored Linear fit DLS on Noisy Function: $f(x) = (x + 3) + \\epsilon$")
@@ -303,8 +343,8 @@ def linConditioningTests():
     ############################################################################################
 
     # generate both types of noise
-    x_noise, lin_noisy_n = genNoisyFunc(lin_ex, 'n', 'm', -10, 10, 100)
-    x_noise, lin_noisy_u = genNoisyFunc(lin_ex, 'u', 'm', -10, 10, 100)
+    x_noise, lin_noisy_n = genNoisyFunc(lin_ex, 'n', 'l', -5, 5, 50)
+    x_noise, lin_noisy_u = genNoisyFunc(lin_ex, 'u', 'l', -5, 5, 50)
 
     # perform DLS
     a_norm, k_norm = LSqr_linfit(x_noise, lin_noisy_n)
@@ -319,7 +359,7 @@ def linConditioningTests():
     err_uni = lambda x: abs(lin_ex(x) - DLS_uni(x))
 
     # Evaluate functions for plotting
-    xevals = np.linspace(-10, 10, 1000)
+    xevals = np.linspace(-5, 5, 1000)
 
     feval = lin_ex(xevals)
     DLS_n_eval = DLS_norm(xevals)
@@ -327,22 +367,23 @@ def linConditioningTests():
     err_n_eval = err_norm(xevals)
     err_u_eval = err_uni(xevals)
 
+
     # Plot results:
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     fig.suptitle(f'Comparison of Normal and Uniform Noise')
 
     axes[0,0].scatter(x_noise, lin_noisy_n, color='black', marker='o', label='Noisy Data')
     axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
-    axes[0,0].plot(xevals, DLS_n_eval, color='red', label=f"LS Approximation: $f(x) = {a_norm[1]:.2f}x + {a_norm[0]:.2f}$")
-    axes[0,0].legend()
+    axes[0,0].plot(xevals, DLS_n_eval, color='red', label=f"LS Approx.: $f(x) = {a_norm[1]:.2f}x + {a_norm[0]:.2f}$")
+    axes[0,0].legend(loc="upper left", bbox_to_anchor=(0.55,0.4))
     axes[0,0].set_xlabel("x")
     axes[0,0].set_ylabel("y")
     axes[0,0].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~N(0, 4)$")
 
     axes[0,1].scatter(x_noise, lin_noisy_u, color='black', marker='o', label='Noisy Data')
     axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
-    axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approximation: $f(x) = {a_uni[1]:.2f}x + {a_uni[0]:.2f}$")
-    axes[0,1].legend()
+    axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approx.: $f(x) = {a_uni[1]:.2f}x + {a_uni[0]:.2f}$")
+    axes[0,1].legend(loc="upper left", bbox_to_anchor=(0.55,0.4))
     axes[0,1].set_xlabel("x")
     axes[0,1].set_ylabel("y")
     axes[0,1].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-2, 2)$")
@@ -357,8 +398,12 @@ def linConditioningTests():
     axes[1,1].set_ylabel("Absolute Error")
     axes[1,1].set_title(f"Absoulte Error of DLS using Uniform Noise")
 
+    fig.savefig("noise_comparison_linear.pdf", bbox_inches="tight")
+
     plt.tight_layout()
     plt.show()
+
+    
 
     ########################################################
     # Comparing Uniform noise at three levels and 100 points
@@ -424,17 +469,17 @@ def linConditioningTests():
     axes[1,0].plot(xevals, err_s_eval, color='red')
     axes[1,0].set_xlabel("x")
     axes[1,0].set_ylabel("Absolute Error")
-    axes[1,0].set_title(f"Absoulte Error of DLS using 'Small' Uniform Noise")
+    axes[1,0].set_title(f"Abs Err using 'Small' Uniform Noise")
 
     axes[1,1].plot(xevals, err_m_eval, color='red')
     axes[1,1].set_xlabel("x")
     axes[1,1].set_ylabel("Absolute Error")
-    axes[1,1].set_title(f"Absoulte Error of DLS using 'Medium' Uniform Noise")
+    axes[1,1].set_title(f"Abs Err using 'Medium' Uniform Noise")
 
     axes[1,2].plot(xevals, err_l_eval, color='red')
     axes[1,2].set_xlabel("x")
     axes[1,2].set_ylabel("Absolute Error")
-    axes[1,2].set_title(f"Absoulte Error of DLS using 'Large' Uniform Noise")
+    axes[1,2].set_title(f"Abs Err using 'Large' Uniform Noise")
 
     plt.tight_layout()
     plt.show()
@@ -518,7 +563,7 @@ def linConditioningTests():
     plt.tight_layout()
     plt.show()
 
-
+    
     return
     
 
@@ -534,6 +579,11 @@ def polyConditioningTests():
     poly2 = lambda x: (x-1)**2
     poly5 = lambda x: (x-1)**5
     poly9 = lambda x: (x-1)**9
+
+    # real coefficient vectors
+    coef2 = np.array([1, -2, 1], dtype=float)
+    coef5 = np.array([-1, 5, -10, 10, -5, 1], dtype=float)
+    coef9 = np.array([-1, 9, -36, 84, -126, 126, -84, 36, -9, 1], dtype=float)
 
     # arrays to store condition numbers and coefficient differences:
     reg_conditions2 = np.zeros(100)
@@ -604,6 +654,15 @@ def polyConditioningTests():
             sample_a_QR9, sample_QR_M9 ,sample_k_QR9 = LSqr_polyfit(sample_x_noise, sample_poly_noisy9, 9)
 
             # Compute average coefficient differences for each polynomial
+            sample_reg_avg2 = np.linalg.norm(coef2 - sample_a_reg2)
+            sample_reg_avg5 = np.linalg.norm(coef5 - sample_a_reg5)
+            sample_reg_avg9 = np.linalg.norm(coef9 - sample_a_reg9)
+
+            sample_QR_avg2 = np.linalg.norm(coef2 - sample_a_QR2)
+            sample_QR_avg5 = np.linalg.norm(coef5 - sample_a_QR5)
+            sample_QR_avg9 = np.linalg.norm(coef9 - sample_a_QR9)
+
+            '''
             sample_reg_avg2 = (abs(sample_a_reg2[0] - 1) + abs(sample_a_reg2[1] + 2) + abs(sample_a_reg2[2] - 1))/3
             sample_reg_avg5 = (abs(sample_a_reg5[0] + 1) + abs(sample_a_reg5[1] - 5) + abs(sample_a_reg5[2] + 10) + abs(sample_a_reg5[3] - 10) + abs(sample_a_reg5[4] + 5) + abs(sample_a_reg5[5] - 1))/5
             sample_reg_avg9 = (abs(sample_a_reg9[0] + 1) + abs(sample_a_reg9[1] - 9) + abs(sample_a_reg9[2] + 36) + abs(sample_a_reg9[3] - 84) + abs(sample_a_reg9[4] + 126) + abs(sample_a_reg9[5] - 126) + abs(sample_a_reg9[6] + 84) + abs(sample_a_reg9[7] - 36) + abs(sample_a_reg9[8] + 9) + abs(sample_a_reg9[9] - 1))/9
@@ -611,6 +670,7 @@ def polyConditioningTests():
             sample_QR_avg2 = (abs(sample_a_QR2[0] - 1) + abs(sample_a_QR2[1] - 1) + abs(sample_a_QR2[2] - 2))/3
             sample_QR_avg5 = (abs(sample_a_QR5[0] - 1) + abs(sample_a_QR5[1] - 1) + abs(sample_a_QR5[2] - 2) + abs(sample_a_QR5[3] - 3) + abs(sample_a_QR5[4] - 4) + abs(sample_a_QR5[5] - 5))/5
             sample_QR_avg9 = (abs(sample_a_QR9[0] + 1) + abs(sample_a_QR9[1] - 9) + abs(sample_a_QR9[2] + 36) + abs(sample_a_QR9[3] - 84) + abs(sample_a_QR9[4] + 126) + abs(sample_a_QR9[5] - 126) + abs(sample_a_QR9[6] + 84) + abs(sample_a_QR9[7] - 36) + abs(sample_a_QR9[8] + 9) + abs(sample_a_QR9[9] - 1))/9
+            '''
 
             # add sampled averages to arrays
             sample_reg_coef2[j] = sample_reg_avg2
@@ -634,80 +694,93 @@ def polyConditioningTests():
     #create x values for plotting
     xvals = np.linspace(10, 110, 100)
 
-    # Standard DLS
-    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
-    fig.suptitle(f"Conditioning and Error for Standard Polynomial DLS of Varying Degrees")
+    #########################
+    # Standard DLS Plot
+    #########################
 
-    axes[0,0].scatter(xvals, reg_conditions2, color='black', marker='o')
-    axes[0,0].set_ylabel('Condition Number')
-    axes[0,0].set_xlabel('Number of Data Points Used')
-    axes[0,0].set_title(f'Condition Number for Degree 2 Polynomial Fit')
+    with plt.rc_context(changeFontSize(6)):
+        #figure skeleton
+        fig, axs = plt.subplots(
+            2, 3,
+            figsize=(8.2, 4.3),
+            sharex=True,           # x‑axis aligned
+            sharey=False,          # each panel free to choose its own y‑scale
+            constrained_layout=True
+        )
 
-    axes[1,0].scatter(xvals, reg_coef_diff2, color='black', marker='o')
-    axes[1,0].set_ylabel('Average Error Between DLS and Exact Coefficients')
-    axes[1,0].set_xlabel('Number of Data Points Used')
-    axes[1,0].set_title('Average Error in Coefficients (Degree 2)')
+        fig.set_constrained_layout_pads(
+            w_pad   = 0.25,   # pad between figure edge and subplots (left/right)
+            h_pad   = 0.20,   # pad between figure edge and subplots (top/bottom)
+            wspace  = 0.2,   # horizontal space between columns
+            hspace  = 0.25    # vertical space between rows
+        )
 
-    axes[0,1].scatter(xvals, reg_conditions5, color='black', marker='o')
-    axes[0,1].set_ylabel('Condition Number')
-    axes[0,1].set_xlabel('Number of Data Points Used')
-    axes[0,1].set_title(f'Condition Number for Degree 5 Polynomial Fit')
+        fig.suptitle("Conditioning & Coefficient Error for Standard Polynomial DLS")
 
-    axes[1,1].scatter(xvals, reg_coef_diff5, color='black', marker='o')
-    axes[1,1].set_ylabel('Average Error Between DLS and Exact Coefficients')
-    axes[1,1].set_xlabel('Number of Data Points Used')
-    axes[1,1].set_title('Average Error in Coefficients (Degree 5)')
+        # Populate the 6 panels
+        info_top = [("2", reg_conditions2),
+                    ("5", reg_conditions5),
+                    ("9", reg_conditions9)]
+        info_bot = [("2", reg_coef_diff2),
+                    ("5", reg_coef_diff5),
+                    ("9", reg_coef_diff9)]
+        
+        for col, (deg, ydata) in enumerate(info_top):
+            poly_cond_helper(axs[0, col], xvals, ydata,
+                row_lbl="condition number", col_deg=deg, title_row=True)
 
-    axes[0,2].scatter(xvals, reg_conditions9, color='black', marker='o')
-    axes[0,2].set_ylabel('Condition Number')
-    axes[0,2].set_xlabel('Number of Data Points Used')
-    axes[0,2].set_title(f'Condition Number for Degree 9 Polynomial Fit')
+        for col, (deg, ydata) in enumerate(info_bot):
+            poly_cond_helper(axs[1, col], xvals, ydata,
+                    row_lbl=r"mean $\| c_{true} - c_{est}\|_2$", col_deg=deg, title_row=False)
+            
+        
+        fig.savefig("poly_cond.pdf", bbox_inches="tight")    
+            
+        plt.show()
 
-    axes[1,2].scatter(xvals, reg_coef_diff9, color='black', marker='o')
-    axes[1,2].set_ylabel('Average Error Between DLS and Exact Coefficients')
-    axes[1,2].set_xlabel('Number of Data Points Used')
-    axes[1,2].set_title('Average Error in Coefficients (Degree 9)')
+    #########################
+    # QR factored DLS Plot
+    #########################
 
-    plt.tight_layout()
-    plt.show()
+    with plt.rc_context(changeFontSize(6)):
+        #figure skeleton
+        fig, axs = plt.subplots(
+            2, 3,
+            figsize=(8.2, 4.3),
+            sharex=True,           # x‑axis aligned
+            sharey=False,          # each panel free to choose its own y‑scale
+            constrained_layout=True
+        )
 
+        fig.set_constrained_layout_pads(
+            w_pad   = 0.25,   # pad between figure edge and subplots (left/right)
+            h_pad   = 0.20,   # pad between figure edge and subplots (top/bottom)
+            wspace  = 0.2,   # horizontal space between columns
+            hspace  = 0.25    # vertical space between rows
+        )
 
-    # QR factored DLS
-    fig, axes = plt.subplots(2, 3, figsize=(12, 8))
-    fig.suptitle(f"Conditioning and Error for QR Factored Polynomial DLS of Varying Degrees")
+        fig.suptitle("Conditioning & Coefficient Error for QR Factored Polynomial DLS")
 
-    axes[0,0].scatter(xvals, QR_conditions2, color='black', marker='o')
-    axes[0,0].set_ylabel('Condition Number')
-    axes[0,0].set_xlabel('Number of Data Points Used')
-    axes[0,0].set_title(f'Condition Number for Degree 2 Polynomial Fit')
+        # Populate the 6 panels
+        info_top_QR = [("2", QR_conditions2),
+                    ("5", QR_conditions5),
+                    ("9", QR_conditions9)]
+        info_bot_QR = [("2", QR_coef_diff2),
+                    ("5", QR_coef_diff5),
+                    ("9", QR_coef_diff9)]
+        
+        for col, (deg, ydata) in enumerate(info_top_QR):
+            poly_cond_helper(axs[0, col], xvals, ydata,
+                row_lbl="Condition Number", col_deg=deg, title_row=True)
+            
 
-    axes[1,0].scatter(xvals, QR_coef_diff2, color='black', marker='o')
-    axes[1,0].set_ylabel('Average Error Between DLS and Exact Coefficients')
-    axes[1,0].set_xlabel('Number of Data Points Used')
-    axes[1,0].set_title('Average Error in Coefficients (Degree 2)')
+        for col, (deg, ydata) in enumerate(info_bot_QR):
+            poly_cond_helper(axs[1, col], xvals, ydata,
+                    row_lbl=r"mean $\| c_{true} - c_{est}\|_2$", col_deg=deg, title_row=False)
+            
 
-    axes[0,1].scatter(xvals, QR_conditions5, color='black', marker='o')
-    axes[0,1].set_ylabel('Condition Number')
-    axes[0,1].set_xlabel('Number of Data Points Used')
-    axes[0,1].set_title(f'Condition Number for Degree 5 Polynomial Fit')
-
-    axes[1,1].scatter(xvals, QR_coef_diff5, color='black', marker='o')
-    axes[1,1].set_ylabel('Average Error Between DLS and Exact Coefficients')
-    axes[1,1].set_xlabel('Number of Data Points Used')
-    axes[1,1].set_title('Average Error in Coefficients (Degree 5)')
-
-    axes[0,2].scatter(xvals, QR_conditions9, color='black', marker='o')
-    axes[0,2].set_ylabel('Condition Number')
-    axes[0,2].set_xlabel('Number of Data Points Used')
-    axes[0,2].set_title(f'Condition Number for Degree 9 Polynomial Fit')
-
-    axes[1,2].scatter(xvals, QR_coef_diff9, color='black', marker='o')
-    axes[1,2].set_ylabel('Average Error Between DLS and Exact Coefficients')
-    axes[1,2].set_xlabel('Number of Data Points Used')
-    axes[1,2].set_title('Average Error in Coefficients (Degree 9)')
-
-    plt.tight_layout()
-    plt.show()
+        fig.savefig("poly_cond_qr.pdf", bbox_inches="tight") 
+        plt.show()
 
     
 
@@ -725,8 +798,8 @@ def polyConditioningTests():
     ############################################################################################
 
     # generate both types of noise
-    x_noise, poly_noisy_n = genNoisyFunc(poly3, 'n', 'l', -5, 5, 50)
-    x_noise, poly_noisy_u = genNoisyFunc(poly3, 'u', 'l', -5, 5, 50)
+    x_noise, poly_noisy_n = genNoisyFunc(poly3, 'n', 'm', -10, 10, 100)
+    x_noise, poly_noisy_u = genNoisyFunc(poly3, 'u', 'm', -10, 10, 100)
 
     # perform DLS
     a_norm, M_norm, k_norm = LSqr_polyfit(x_noise, poly_noisy_n, 3)
@@ -741,7 +814,7 @@ def polyConditioningTests():
     err_uni = lambda x: abs(poly3(x) - DLS_uni(x))
 
     # Evaluate functions for plotting
-    xevals = np.linspace(-5, 5, 1000)
+    xevals = np.linspace(-10, 10, 1000)
 
     feval = poly3(xevals)
     DLS_n_eval = DLS_norm(xevals)
@@ -749,6 +822,7 @@ def polyConditioningTests():
     err_n_eval = err_norm(xevals)
     err_u_eval = err_uni(xevals)
 
+    
     # Plot results:
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
     fig.suptitle(f'Comparison of Normal and Uniform Noise')
@@ -767,7 +841,7 @@ def polyConditioningTests():
     axes[0,1].legend()
     axes[0,1].set_xlabel("x")
     axes[0,1].set_ylabel("y")
-    axes[0,1].set_title(f"$f(x) = (x + 3) + \\epsilon | \\epsilon~Uniform(-3, 3)$")
+    axes[0,1].set_title(f"$f(x) = .1(x - 3)^3 + \\epsilon | \\epsilon~Uniform(-3, 3)$")
 
     axes[1,0].plot(xevals, err_n_eval, color='red')
     axes[1,0].set_xlabel("x")
@@ -778,6 +852,8 @@ def polyConditioningTests():
     axes[1,1].set_xlabel("x")
     axes[1,1].set_ylabel("Absolute Error")
     axes[1,1].set_title(f"Absoulte Error of DLS using Uniform Noise")
+
+    fig.savefig("noise_comparison_poly.pdf", bbox_inches="tight")
 
     plt.tight_layout()
     plt.show()
@@ -847,17 +923,17 @@ def polyConditioningTests():
     axes[1,0].plot(xevals, err_s_eval, color='red')
     axes[1,0].set_xlabel("x")
     axes[1,0].set_ylabel("Absolute Error")
-    axes[1,0].set_title(f"Absoulte Error of DLS using 'Small' Uniform Noise")
+    axes[1,0].set_title(f"Abs Err using 'Small' Uniform Noise")
 
     axes[1,1].plot(xevals, err_m_eval, color='red')
     axes[1,1].set_xlabel("x")
     axes[1,1].set_ylabel("Absolute Error")
-    axes[1,1].set_title(f"Absoulte Error of DLS using 'Medium' Uniform Noise")
+    axes[1,1].set_title(f"Abs Err using 'Medium' Uniform Noise")
 
     axes[1,2].plot(xevals, err_l_eval, color='red')
     axes[1,2].set_xlabel("x")
     axes[1,2].set_ylabel("Absolute Error")
-    axes[1,2].set_title(f"Absoulte Error of DLS using 'Large' Uniform Noise")
+    axes[1,2].set_title(f"Abs Errusing 'Large' Uniform Noise")
 
     plt.tight_layout()
     plt.show()
@@ -988,17 +1064,29 @@ def LS_linfit(xi,yi):
     b = np.transpose(M)@yi
 
     # Solve normal eqs
-    a = np.linalg.solve(N,b)
+    c = np.linalg.solve(N,b)
 
+    ################################
     # Solving for condition number:
+    ################################
 
-    #perform SVD of N (M^T*M)
-    U, sig, V = np.linalg.svd(N)
+    # Compute the singular values of M
+    singular_values = np.linalg.svd(M, compute_uv=False)
+    sigma1 = singular_values[0]        # largest singular value
+    sigman = singular_values[-1]       # smallest singular value
 
-    # take ratio of largest and smallest singular values
-    cond = (sig[0]) / (sig[-1])
+    # Compute the residual vector r = y - M c
+    residual = yi - M.dot(c)
 
-    return a, cond
+    # Compute norms and condition number of M
+    norm_resid = np.linalg.norm(residual)   # ||y - M c||
+    norm_c     = np.linalg.norm(c)          # ||c||
+    cond_M     = sigma1 / sigman            
+
+    # Compute the sensitivity bound
+    cond = cond_M * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
+
+    return c, cond
 
 
 
@@ -1013,17 +1101,29 @@ def LSqr_linfit(xi,yi):
     QT = np.transpose(Q)
 
     # Solve equivalent system Rx = Q^T y
-    a = np.linalg.solve(R,QT@yi)
+    c = np.linalg.solve(R,QT@yi)
 
+    ################################
     # Solving for condition number:
+    ################################
 
-    #perform SVD of R
-    U, sig, V = np.linalg.svd(R)
+    # Compute the singular values of M
+    singular_values = np.linalg.svd(M, compute_uv=False)
+    sigma1 = singular_values[0]        # largest singular value
+    sigman = singular_values[-1]       # smallest singular value
 
-    # take ratio of largest and smallest singular values
-    cond = (sig[0]) / (sig[-1])
+    # Compute the residual vector r = y - M c
+    residual = yi - M.dot(c)
 
-    return a, cond
+    # Compute norms and condition number of M
+    norm_resid = np.linalg.norm(residual)   # ||y - M c||
+    norm_c     = np.linalg.norm(c)          # ||c||
+    cond_M     = sigma1 / sigman            
+
+    # Compute the sensitivity bound
+    cond = cond_M * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
+
+    return c, cond
 
 
 # Polynomial least squares solving the normal equations directly
@@ -1038,17 +1138,29 @@ def LS_polyfit(xi,yi,k):
     b = np.transpose(M)@yi
 
     # Solve normal eqs
-    a = np.linalg.solve(N,b)
+    c = np.linalg.solve(N,b)
 
+    ################################
     # Solving for condition number:
+    ################################
 
-    #perform SVD of N (M^T*M)
-    U, sig, V = np.linalg.svd(N)
+    # Compute the singular values of M
+    singular_values = np.linalg.svd(M, compute_uv=False)
+    sigma1 = singular_values[0]        # largest singular value
+    sigman = singular_values[-1]       # smallest singular value
 
-    # take ratio of largest and smallest singular values
-    cond = (sig[0]) / (sig[-1])
+    # Compute the residual vector r = y - M c
+    residual = yi - M.dot(c)
 
-    return (a,M, cond)
+    # Compute norms and condition number of M
+    norm_resid = np.linalg.norm(residual)   # ||y - M c||
+    norm_c     = np.linalg.norm(c)          # ||c||
+    cond_M     = sigma1 / sigman            
+
+    # Compute the sensitivity bound
+    cond = cond_M * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
+
+    return (c,M, cond)
 
 # Polynomial LS again using QR factorization to reduce conditioning of M^TM
 
@@ -1063,17 +1175,29 @@ def LSqr_polyfit(xi,yi,k):
     QT = np.transpose(Q)
 
     # Solve normal eqs
-    a = np.linalg.solve(R,QT@yi)
+    c = np.linalg.solve(R,QT@yi)
 
+    ################################
     # Solving for condition number:
+    ################################
 
-    #perform SVD of N (M^T*M)
-    U, sig, V = np.linalg.svd(R)
+    # Compute the singular values of M
+    singular_values = np.linalg.svd(M, compute_uv=False)
+    sigma1 = singular_values[0]        # largest singular value
+    sigman = singular_values[-1]       # smallest singular value
 
-    # take ratio of largest and smallest singular values
-    cond = (sig[0]) / (sig[-1])
+    # Compute the residual vector r = y - M c
+    residual = yi - M.dot(c)
 
-    return (a,M, cond)
+    # Compute norms and condition number of M
+    norm_resid = np.linalg.norm(residual)   # ||y - M c||
+    norm_c     = np.linalg.norm(c)          # ||c||
+    cond_M     = sigma1 / sigman            
+
+    # Compute the sensitivity bound
+    cond = cond_M * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
+
+    return (c,M, cond)
 
 
 def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points, multiplier=1):
@@ -1082,7 +1206,7 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
     Generate noisy function 
     * f: original function to generate noise from
     * noise_type: desired noise type to be applied to that function ('u' for uniform, 'n' for normal)
-    * noise_level: scale of noise to be applied (constant scale: 's', 'm', 'l', or proportional scaling 'p')
+    * noise_level: scale of noise to be applied (constant scale: 't' 's', 'm', 'l', or proportional scaling 'p')
     * left_bound: left bound of where you are taking data points from
     * right_bound: right bound of where you are taking data points from
     * num_points: number of "noisy" data points you want to consider (equispaced from left to right bound)
@@ -1109,6 +1233,8 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
             noise = rng.normal(0, 2*multiplier, num_points)
         elif noise_level == 'l':
             noise = rng.normal(0, 3*multiplier, num_points)
+        elif noise_level == 't':  # Used for stability comparison between QR and Standard normal equations
+            noise = rng.normal(0, 1e-8, num_points)
         elif noise_level == 'p':
             # special case where the noise is scaled proportionally to the x value: start with 's' noise level then scale\
             noise = rng.normal(0, 1, num_points)
@@ -1125,6 +1251,9 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
             noise = rng.uniform(-2*multiplier,2*multiplier, num_points)
         elif noise_level == 'l':
             noise = rng.uniform(-3*multiplier,3*multiplier, num_points)
+        elif noise_level == 't':
+            noise = rng.uniform(-1.7e-8, 1.7e-8, num_points)
+        
         elif noise_level == 'p':
             # special case where the noise is scaled proportionally to the x value: start with 's' noise level then scale\
             noise = rng.uniform(-1,1)
@@ -1141,7 +1270,52 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
 
     return [xvals, yvals]
 
+################################
+# Helper functions for plotting:
+################################
 
+def poly_cond_helper(ax, x, y, row_lbl, col_deg, title_row):
+    """Scatter + cosmetics for one subplot."""
+    ax.scatter(x, y, s=18, color="k")                # compact marker
+    if title_row:                                    # only top row gets titles
+        ax.set_title(f"Degree {col_deg}", pad=6)
+    if col_deg == "2":                               # only left column gets y‑labels
+        ax.set_ylabel(row_lbl, labelpad=10)
+    ax.set_xlabel("Num of Data Points", labelpad=6)
+    ax.margins(x=0.02, y=0.05)                       # small padding
+    ax.grid(True, ls=":", lw=0.5, alpha=0.55)
+
+
+def lin_cond_helper(ax, x, y, y_label, title):
+    ax.scatter(x, y, s=18, color="k")
+    ax.set_title(title, pad=6)
+    ax.set_xlabel("Num of Data Points", labelpad=10)
+    ax.set_ylabel(y_label,          labelpad=10)
+    ax.margins(x=0.02, y=0.05)
+    ax.grid(True, ls=":", lw=0.5, alpha=0.55)
+
+
+def noiseDiffHelper(ax, x, y, *, title="", xlab="x", ylab="y"):
+    ax.plot(x, y, color="red", lw=1.5)   # default line (override when needed)
+    ax.set_title(title, pad=6)
+    ax.set_xlabel(xlab, labelpad=10)
+    ax.set_ylabel(ylab, labelpad=10)
+    ax.margins(x=0.02, y=0.05)
+    ax.grid(True, ls=":", lw=0.5, alpha=0.55)
+
+
+def changeFontSize(delta):
+
+    change = {
+        "font.size"       : plt.rcParams["font.size"]        + delta,
+        "axes.titlesize"  : plt.rcParams["axes.titlesize"]   + delta,
+        "axes.labelsize"  : plt.rcParams["axes.labelsize"]   + delta,
+        "figure.titlesize": plt.rcParams["figure.titlesize"] + delta,
+        "xtick.labelsize" : plt.rcParams["xtick.labelsize"]  + delta,
+        "ytick.labelsize" : plt.rcParams["ytick.labelsize"]  + delta,
+    }
+
+    return change
 
 #driver()
 linConditioningTests()
