@@ -32,6 +32,28 @@ def prob2():
     return
 
 
+def prob3():
+
+    results = []
+    for n in range(4, 21, 4):
+        H = create_hilbert(n)
+        dom_eigen, dom_eigenvec, iterations, eigenvals = power_method(H)
+        print(f"Dominant eigenvalue for Hilbert Matrix of size {n}:  {dom_eigen:.6f}")
+        print(f"Number of iterations to converge:  {iterations}")
+
+
+
+    #part b.)
+    H16 = create_hilbert(16)
+    Hinv = np.linalg.inv(H16)
+
+    dom_eigen, dom_eigenvec, iterations, eigenvals = power_method(Hinv)
+        print(f"Smallest eigenvalue for Hilbert Matrix of size 16:  {dom_eigen:.6f}")
+        print(f"Number of iterations to converge:  {iterations}")
+
+    return
+
+
 
 
 
@@ -90,4 +112,5 @@ def power_method(A, max_iter=1000, tol=1e-6):
 
 
 
-prob2()
+#prob2()
+prob3()
