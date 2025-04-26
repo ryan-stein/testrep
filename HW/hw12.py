@@ -47,9 +47,9 @@ def prob3():
     H16 = create_hilbert(16)
     Hinv = np.linalg.inv(H16)
 
-    dom_eigen, dom_eigenvec, iterations, eigenvals = power_method(Hinv)
-        print(f"Smallest eigenvalue for Hilbert Matrix of size 16:  {dom_eigen:.6f}")
-        print(f"Number of iterations to converge:  {iterations}")
+    small_eigen, small_eigenvec, iterations2, eigenvals2 = power_method(Hinv)
+    print(f"Smallest eigenvalue for Hilbert Matrix of size 16:  {small_eigen:.6f}")
+    print(f"Number of iterations to converge:  {iterations2}")
 
     return
 
