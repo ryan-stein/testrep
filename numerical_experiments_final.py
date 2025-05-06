@@ -389,7 +389,8 @@ def poly_QR_comp():
     plt.show()
 
     return
-     
+
+
 def poly_noise_graphs():
 
     poly3 = lambda x: .1*(x-1)**3
@@ -398,7 +399,7 @@ def poly_noise_graphs():
     feval = poly3(xevals)
 
     ############################################################
-    # Comparing Uniform noise at low and high variance 50 points
+    # Comparing Uniform noise at low and high variance 25 points
     ############################################################
 
     # generate noisy data at each level:
@@ -458,11 +459,45 @@ def poly_noise_graphs():
     plt.show()
 
     
+    ############################################################################
+    # Error in coefficients by variance level
+    ############################################################################
+
+    variance_levels = np.linspace(1, 500, 100)
+    mean_coef_errs = np.zeros(100)
+    poly3_coefs = np.array([-0.1, 0.3, -0.3, 0.1])
+    
+    for i in range(100):
+
+        coef_errs_v = np.zeros(100)
+        
+        for j in range(100):
+            # generate noisy function based on variance level
+            x_noise, poly_noisy = genNoisyFunc(poly3, 'u', 'v', 0, 10, 25, var=variance_levels[i])
+
+            # perform least squares regression
+            a, M, k = LSqr_polyfit(x_noise, poly_noisy, 3)
+
+            # update coefficient difference vector
+            coef_errs_v[j] = np.linalg.norm(poly3_coefs - a)
+        
+        mean_coef_errs[i] = sum(coef_errs_v)/100
 
 
+    # plot results
+    with plt.rc_context(changeFontSize(10)):
+        fig, axes = plt.subplots(1, 1, figsize=(12, 8))
+
+        axes.scatter(x=variance_levels, y=mean_coef_errs, color='black', marker='o')
+        axes.set_xlabel("Variance of Random Noise")
+        axes.set_ylabel(r"Mean $\| c_{true} - c_{est}\|_2$")
+        axes.set_title("Average Coefficient Error vs. Variance of Random Noise")
+
+        plt.tight_layout()
+        plt.show()
 
     ###################################################################################
-    # Comparison of DLS using different numbers of data points and Uniform Large Noise
+    # Comparison of DLS using 5 and 125 of data points and Uniform Large Noise
     ###################################################################################
 
     # Generate noisy data:
@@ -520,15 +555,393 @@ def poly_noise_graphs():
 
     plt.tight_layout()
     plt.show()
+
+
+    ###################################################################################
+    # Comparison of DLS varying numbers of data points and Uniform Large Noise
+    ###################################################################################
+    num_points = np.linspace(5, 500, 100)
+    mean_coef_errs_points = np.zeros(100)
     
+    for i in range(100):
+
+        coef_errs_points = np.zeros(100)
+        
+        for j in range(100):
+            # generate noisy function based on variance level
+            x_noise, poly_noisy = genNoisyFunc(poly3, 'u', 'l', 0, 10, num_points=int(num_points[i]))
+
+            # perform least squares regression
+            a, M, k = LSqr_polyfit(x_noise, poly_noisy, 3)
+
+            # update coefficient difference vector
+            coef_errs_points[j] = np.linalg.norm(poly3_coefs - a)
+        
+        mean_coef_errs_points[i] = sum(coef_errs_points)/100
+
+
+    # plot results
+    with plt.rc_context(changeFontSize(10)):
+        fig, axes = plt.subplots(1, 1, figsize=(12, 8))
+
+        axes.scatter(x=num_points, y=mean_coef_errs_points, color='black', marker='o')
+        axes.set_xlabel("Number of Data Points")
+        axes.set_ylabel(r"Mean $\| c_{true} - c_{est}\|_2$")
+        axes.set_title("Average Coefficient Error vs. Number of Data Points")
+
+        plt.tight_layout()
+        plt.show()
     
 
     return
 
 
+def linear_noise_comps():
+
+    lin_ex = lambda x: x + 3
+
+    ############################################################################################
+    # Comparing Uniform and Normal noise for linear function
+    ############################################################################################
+
+    # generate both types of noise
+    x_noise, lin_noisy_n = genNoisyFunc(lin_ex, 'n', 'l', -5, 5, 50)
+    x_noise, lin_noisy_u = genNoisyFunc(lin_ex, 'u', 'l', -5, 5, 50)
+
+    # perform DLS
+    a_norm, k_norm = LSqr_linfit(x_noise, lin_noisy_n)
+    a_uni, k_uni = LSqr_linfit(x_noise, lin_noisy_u)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_norm = lambda x: a_norm[0] + a_norm[1]*x
+    DLS_uni = lambda x: a_uni[0] + a_uni[1]*x
+
+    # define error functions to allow for smooth error plotting
+    err_norm = lambda x: abs(lin_ex(x) - DLS_norm(x))
+    err_uni = lambda x: abs(lin_ex(x) - DLS_uni(x))
+
+    # Evaluate functions for plotting
+    xevals = np.linspace(-10, 10, 1000)
+
+    feval = lin_ex(xevals)
+    DLS_n_eval = DLS_norm(xevals)
+    DLS_u_eval = DLS_uni(xevals)
+    err_n_eval = err_norm(xevals)
+    err_u_eval = err_uni(xevals)
 
 
+    # Plot results:
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Normal and Uniform Noise: Linear DLS')
 
+    axes[0,0].scatter(x_noise, lin_noisy_n, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,0].plot(xevals, DLS_n_eval, color='red', label=f"LS Approx.: $f(x) = {a_norm[1]:.2f}x + {a_norm[0]:.2f}$")
+    axes[0,0].legend(loc="upper left", bbox_to_anchor=(0.55,0.4))
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(r"$f(x) = (x + 3) + \epsilon \;| \; \epsilon \sim N(0, 9)$")
+
+    axes[0,1].scatter(x_noise, lin_noisy_u, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = x + 3$")
+    axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approx.: $f(x) = {a_uni[1]:.2f}x + {a_uni[0]:.2f}$")
+    axes[0,1].legend(loc="upper left", bbox_to_anchor=(0.55,0.4))
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(r"$f(x) = (x + 3) + \epsilon \; | \; \epsilon \sim Uniform(-3\sqrt{3}, 3\sqrt{3})$")
+
+    axes[1,0].plot(xevals, err_n_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using Normal Noise")
+
+    axes[1,1].plot(xevals, err_u_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using Uniform Noise")
+
+    fig.savefig("noise_comparison_linear.pdf", bbox_inches="tight")
+
+    plt.tight_layout()
+    plt.show()
+
+    return
+
+
+def poly_noise_comps():
+
+    poly3 = lambda x: .1*(x-1)**3
+
+    ############################################################################################
+    # Comparing Uniform and Normal noise for polynomial
+    ############################################################################################
+
+    # generate both types of noise
+    x_noise, poly_noisy_n = genNoisyFunc(poly3, 'n', 'l', -5, 5, 50)
+    x_noise, poly_noisy_u = genNoisyFunc(poly3, 'u', 'l', -5, 5, 50)
+
+    # perform DLS
+    a_norm, M_norm, k_norm = LSqr_polyfit(x_noise, poly_noisy_n, 3)
+    a_uni, M_uni, k_uni = LSqr_polyfit(x_noise, poly_noisy_u, 3)
+
+    # define functions based off least squares results to allow for smooth error plot:
+    DLS_norm = lambda x: a_norm[0] + a_norm[1]*x + a_norm[2]*x**2 + a_norm[3]*x**3
+    DLS_uni = lambda x: a_uni[0] + a_uni[1]*x + a_uni[2]*x**2 + a_uni[3]*x**3
+
+    # define error functions to allow for smooth error plotting
+    err_norm = lambda x: abs(poly3(x) - DLS_norm(x))
+    err_uni = lambda x: abs(poly3(x) - DLS_uni(x))
+
+    # Evaluate functions for plotting
+    xevals = np.linspace(-10, 10, 1000)
+
+    feval = poly3(xevals)
+    DLS_n_eval = DLS_norm(xevals)
+    DLS_u_eval = DLS_uni(xevals)
+    err_n_eval = err_norm(xevals)
+    err_u_eval = err_uni(xevals)
+
+    
+    # Plot results:
+    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+    fig.suptitle(f'Comparison of Normal and Uniform Noise: Polynomial DLS')
+
+    axes[0,0].scatter(x_noise, poly_noisy_n, color='black', marker='o', label='Noisy Data')
+    axes[0,0].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,0].plot(xevals, DLS_n_eval, color='red', label=f"LS Approximation")
+    axes[0,0].legend()
+    axes[0,0].set_xlabel("x")
+    axes[0,0].set_ylabel("y")
+    axes[0,0].set_title(r"$f(x) = .1(x -1)^3 + \epsilon \; | \; \epsilon \sim N(0, 9)$")
+
+    axes[0,1].scatter(x_noise, poly_noisy_u, color='black', marker='o', label='Noisy Data')
+    axes[0,1].plot(xevals, feval, color='blue', label=r"Exact Function: $f(x) = .1(x-1)^3$")
+    axes[0,1].plot(xevals, DLS_u_eval, color='red', label=f"LS Approximation")
+    axes[0,1].legend()
+    axes[0,1].set_xlabel("x")
+    axes[0,1].set_ylabel("y")
+    axes[0,1].set_title(r"$f(x) = .1(x - 3)^3 + \epsilon \; | \; \epsilon \sim Uniform(-3\sqrt{3}, 3\sqrt{3})$")
+
+    axes[1,0].plot(xevals, err_n_eval, color='red')
+    axes[1,0].set_xlabel("x")
+    axes[1,0].set_ylabel("Absolute Error")
+    axes[1,0].set_title(f"Absoulte Error of DLS using Normal Noise")
+
+    axes[1,1].plot(xevals, err_u_eval, color='red')
+    axes[1,1].set_xlabel("x")
+    axes[1,1].set_ylabel("Absolute Error")
+    axes[1,1].set_title(f"Absoulte Error of DLS using Uniform Noise")
+
+    fig.savefig("noise_comparison_poly.pdf", bbox_inches="tight")
+
+    plt.tight_layout()
+    plt.show()
+
+    return
+
+
+def WLS_linear():
+
+    # exact function for heteroskedastic noise to be applied to. 
+    lin_ex = lambda x: x + 3
+
+    # generate heteroskedastic noise
+    x_noise, lin_noisy, var_list = heteroNoise(lin_ex, 0, 20, 50, 4)
+
+    # perform Ordinary DLS and WLS
+    a_OLS, k_OLS = LSqr_linfit(x_noise, lin_noisy)
+    a_WLS = WLSqr_linfit(x_noise, lin_noisy, var_list)
+    
+
+    # define functions based off least squares results to allow for smooth error plot:
+    OLS = lambda x: a_OLS[0] + a_OLS[1]*x
+    WLS = lambda x: a_WLS[0] + a_WLS[1]*x
+
+    # define error functions to allow for smooth error plotting
+    err_OLS = lambda x: abs(lin_ex(x) - OLS(x))
+    err_WLS = lambda x: abs(lin_ex(x) - WLS(x))
+
+    # Evaluate functions for plotting
+    xevals = np.linspace(-10, 30, 1000)
+
+    feval = lin_ex(xevals)
+    OLS_eval = OLS(xevals)
+    WLS_eval = WLS(xevals)
+    err_OLS_eval = err_OLS(xevals)
+    err_WLS_eval = err_WLS(xevals)
+
+
+    # Plot results:
+    with plt.rc_context(changeFontSize(3)):
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        fig.suptitle(r"Ordinary vs. Weighted DLS: Var($\epsilon$) = $4 \cdot x$")
+
+        axes[0,0].scatter(x_noise, lin_noisy, color='black', marker='o', label='Noisy Data')
+        axes[0,0].plot(xevals, feval, color='blue', label="Exact Function")
+        axes[0,0].plot(xevals, OLS_eval, color='red', label=f"LS Approx")
+        axes[0,0].legend(loc="upper left", bbox_to_anchor=(0.65,0.48))
+        axes[0,0].set_xlabel("x")
+        axes[0,0].set_ylabel("y")
+        axes[0,0].set_title("Ordinary DLS")
+
+        axes[0,1].scatter(x_noise, lin_noisy, color='black', marker='o', label='Noisy Data')
+        axes[0,1].plot(xevals, feval, color='blue', label="Exact Function")
+        axes[0,1].plot(xevals, WLS_eval, color='red', label=f"LS Approx")
+        axes[0,1].legend(loc="upper left", bbox_to_anchor=(0.65,0.48))
+        axes[0,1].set_xlabel("x")
+        axes[0,1].set_ylabel("y")
+        axes[0,1].set_title("Weighted DLS")
+
+        axes[1,0].plot(xevals, err_OLS_eval, color='red')
+        axes[1,0].set_xlabel("x")
+        axes[1,0].set_ylabel("Absolute Error")
+        axes[1,0].set_title(f"Absoulte Error of Ordinary DLS")
+
+        axes[1,1].plot(xevals, err_WLS_eval, color='red')
+        axes[1,1].set_xlabel("x")
+        axes[1,1].set_ylabel("Absolute Error")
+        axes[1,1].set_title(f"Absoulte Error of Weighted DLS")
+
+        plt.tight_layout()
+        plt.show()
+
+    return
+
+
+def WLS_poly_known():
+
+    # exact function for heteroskedastic noise to be applied to. 
+    poly3 = lambda x: .1*(x - 1)**3
+
+    xevals = np.linspace(-5, 15, 1000)
+    feval = poly3(xevals)
+
+    # generate heteroskedastic noise
+    x_noise, poly_noisy, var_list = heteroNoise(poly3, 0, 10, 50, 10)
+
+    # perform Ordinary DLS and WLS
+    a_OLS, M, k_OLS = LSqr_polyfit(x_noise, poly_noisy, 3)
+    a_WLS = WLSqr_polyfit(x_noise, poly_noisy, var_list, 3)
+    
+
+    # define functions based off least squares results to allow for smooth error plot:
+    OLS = lambda x: a_OLS[0] + a_OLS[1]*x + a_OLS[2]*x**2 + a_OLS[3]*x**3
+    WLS = lambda x: a_WLS[0] + a_WLS[1]*x + a_WLS[2]*x**2 + a_WLS[3]*x**3
+
+    # define error functions to allow for smooth error plotting
+    err_OLS = lambda x: abs(poly3(x) - OLS(x))
+    err_WLS = lambda x: abs(poly3(x) - WLS(x))
+
+
+    OLS_eval = OLS(xevals)
+    WLS_eval = WLS(xevals)
+    err_OLS_eval = err_OLS(xevals)
+    err_WLS_eval = err_WLS(xevals)
+
+
+    # Plot results:
+    with plt.rc_context(changeFontSize(3)):
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        fig.suptitle(r"Ordinary vs. Weighted DLS: Var($\epsilon$) = $10 \cdot x$")
+
+        axes[0,0].scatter(x_noise, poly_noisy, color='black', marker='o', label='Noisy Data')
+        axes[0,0].plot(xevals, feval, color='blue', label="Exact Function")
+        axes[0,0].plot(xevals, OLS_eval, color='red', label=f"LS Approx")
+        axes[0,0].legend()
+        axes[0,0].set_xlabel("x")
+        axes[0,0].set_ylabel("y")
+        axes[0,0].set_title("Ordinary DLS")
+
+        axes[0,1].scatter(x_noise, poly_noisy, color='black', marker='o', label='Noisy Data')
+        axes[0,1].plot(xevals, feval, color='blue', label="Exact Function")
+        axes[0,1].plot(xevals, WLS_eval, color='red', label=f"LS Approx")
+        axes[0,1].legend()
+        axes[0,1].set_xlabel("x")
+        axes[0,1].set_ylabel("y")
+        axes[0,1].set_title("Weighted DLS")
+
+        axes[1,0].plot(xevals, err_OLS_eval, color='red')
+        axes[1,0].set_xlabel("x")
+        axes[1,0].set_ylabel("Absolute Error")
+        axes[1,0].set_title(f"Absoulte Error of Ordinary DLS")
+
+        axes[1,1].plot(xevals, err_WLS_eval, color='red')
+        axes[1,1].set_xlabel("x")
+        axes[1,1].set_ylabel("Absolute Error")
+        axes[1,1].set_title(f"Absoulte Error of Weighted DLS")
+
+        plt.tight_layout()
+        plt.show()
+
+    return
+
+
+def WLS_poly_unknown():
+
+    # exact function for heteroskedastic noise to be applied to. 
+    poly3 = lambda x: .1*(x - 1)**3
+
+    xevals = np.linspace(-5, 15, 1000)
+    feval = poly3(xevals)
+
+    # generate heteroskedastic noise
+    x_noise, poly_noisy, var_list = heteroNoise(poly3, 0, 10, 50, constant=0, upper_var=14)
+
+    # perform Ordinary DLS and WLS
+    a_OLS, M, k_OLS = LSqr_polyfit(x_noise, poly_noisy, 3)
+    a_WLS = WLSqr_polyfit(x_noise, poly_noisy, var_list, 3)
+    
+
+    # define functions based off least squares results to allow for smooth error plot:
+    OLS = lambda x: a_OLS[0] + a_OLS[1]*x + a_OLS[2]*x**2 + a_OLS[3]*x**3
+    WLS = lambda x: a_WLS[0] + a_WLS[1]*x + a_WLS[2]*x**2 + a_WLS[3]*x**3
+
+    # define error functions to allow for smooth error plotting
+    err_OLS = lambda x: abs(poly3(x) - OLS(x))
+    err_WLS = lambda x: abs(poly3(x) - WLS(x))
+
+
+    OLS_eval = OLS(xevals)
+    WLS_eval = WLS(xevals)
+    err_OLS_eval = err_OLS(xevals)
+    err_WLS_eval = err_WLS(xevals)
+
+
+    # Plot results:
+    with plt.rc_context(changeFontSize(3)):
+        fig, axes = plt.subplots(2, 2, figsize=(12, 8))
+        fig.suptitle(r"Ordinary vs. Weighted DLS: Var($\epsilon$) = $c \cdot x \; | \; c \sim Uniform(7, 14)$")
+
+        axes[0,0].scatter(x_noise, poly_noisy, color='black', marker='o', label='Noisy Data')
+        axes[0,0].plot(xevals, feval, color='blue', label="Exact Function")
+        axes[0,0].plot(xevals, OLS_eval, color='red', label=f"LS Approx")
+        axes[0,0].legend()
+        axes[0,0].set_xlabel("x")
+        axes[0,0].set_ylabel("y")
+        axes[0,0].set_title("Ordinary DLS")
+
+        axes[0,1].scatter(x_noise, poly_noisy, color='black', marker='o', label='Noisy Data')
+        axes[0,1].plot(xevals, feval, color='blue', label="Exact Function")
+        axes[0,1].plot(xevals, WLS_eval, color='red', label=f"LS Approx")
+        axes[0,1].legend()
+        axes[0,1].set_xlabel("x")
+        axes[0,1].set_ylabel("y")
+        axes[0,1].set_title("Weighted DLS")
+
+        axes[1,0].plot(xevals, err_OLS_eval, color='red')
+        axes[1,0].set_xlabel("x")
+        axes[1,0].set_ylabel("Absolute Error")
+        axes[1,0].set_title(f"Absoulte Error of Ordinary DLS")
+
+        axes[1,1].plot(xevals, err_WLS_eval, color='red')
+        axes[1,1].set_xlabel("x")
+        axes[1,1].set_ylabel("Absolute Error")
+        axes[1,1].set_title(f"Absoulte Error of Weighted DLS")
+
+        plt.tight_layout()
+        plt.show()
+
+    return
 
 # Linear LS solving normal equations directly
 def LS_linfit(xi,yi):
@@ -564,7 +977,6 @@ def LS_linfit(xi,yi):
     cond = cond_M * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
 
     return c, cond
-
 
 
 # Linear LS using QR factorization of M as recommended to reduce condtioning
@@ -701,27 +1113,7 @@ def WLSqr_linfit(xi,yi,v):
     # Solve equivalent system Rx = Q^T y
     c = np.linalg.solve(R,QT@y_w)
 
-    ################################
-    # Solving for condition number:
-    ################################
-
-    # Compute the singular values of M_w
-    singular_values = np.linalg.svd(M_w, compute_uv=False)
-    sigma1 = singular_values[0]        # largest singular value
-    sigman = singular_values[-1]       # smallest singular value
-
-    # Compute the residual vector r = y - M c
-    residual = y_w - M_w.dot(c)
-
-    # Compute norms and condition number of M
-    norm_resid = np.linalg.norm(residual)   # ||y - M c||
-    norm_c     = np.linalg.norm(c)          # ||c||
-    cond_M_w     = sigma1 / sigman            
-
-    # Compute the sensitivity bound
-    cond = cond_M_w * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
-
-    return c, cond
+    return c
 
 
 def WLSqr_polyfit(xi,yi,v,k):
@@ -747,38 +1139,16 @@ def WLSqr_polyfit(xi,yi,v,k):
     # Solve normal eqs
     c = np.linalg.solve(R,QT@y_w)
 
-    ################################
-    # Solving for condition number:
-    ################################
-
-    # Compute the singular values of M
-    singular_values = np.linalg.svd(M_w, compute_uv=False)
-    sigma1 = singular_values[0]        # largest singular value
-    sigman = singular_values[-1]       # smallest singular value
-
-    # Compute the residual vector r = y - M c
-    residual = y_w - M_w.dot(c)
-
-    # Compute norms and condition number of M
-    norm_resid = np.linalg.norm(residual)   # ||y - M c||
-    norm_c     = np.linalg.norm(c)          # ||c||
-    cond_M_w     = sigma1 / sigman            
-
-    # Compute the sensitivity bound
-    cond = cond_M_w * np.sqrt(1 + (norm_resid**2) / (sigma1**2 * norm_c**2))
-
-    return (c, cond)
+    return c
 
 
-
-
-def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points, multiplier=1):
+def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points, multiplier=1, var=1):
 
     """
     Generate noisy function 
     * f: original function to generate noise from
     * noise_type: desired noise type to be applied to that function ('u' for uniform, 'n' for normal)
-    * noise_level: scale of noise to be applied (constant scale: 't' 's', 'm', 'l', 'a' (asymetric noise, mean !=0), or proportional scaling 'p')
+    * noise_level: scale of noise to be applied (constant scale: 't' 's', 'm', 'l', 'a', 'v' (asymetric noise, mean !=0), or proportional scaling 'p')
     * left_bound: left bound of where you are taking data points from
     * right_bound: right bound of where you are taking data points from
     * num_points: number of "noisy" data points you want to consider (equispaced from left to right bound)
@@ -832,6 +1202,8 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
             # special case where the noise is scaled proportionally to the x value: start with 's' noise level then scale\
             noise = rng.uniform(-1,1)
             noise *= xvals
+        elif noise_level == 'v': # specific variance is chosen
+            noise = rng.uniform(-np.sqrt(3*var), np.sqrt(3*var), num_points)
         else:
             print("Invalid noise_level argument")
             return     
@@ -845,7 +1217,7 @@ def genNoisyFunc(f, noise_type, noise_level, left_bound, right_bound, num_points
     return [xvals, yvals]
 
 
-def heteroNoise(f, left_bound, right_bound, num_points, constant, prop_to='x'):
+def heteroNoise(f, left_bound, right_bound, num_points, constant, prop_to='x', upper_var=1):
 
     """
     Generate heteroskedastic noisy function 
@@ -855,6 +1227,7 @@ def heteroNoise(f, left_bound, right_bound, num_points, constant, prop_to='x'):
     * right_bound: right bound of where you are taking data points from
     * num_points: number of "noisy" data points you want to consider (equispaced from left to right bound)
     * prop_to: Determines which variable the variance is proportional to, 'x' or 'y'
+    * upper_var: can be used if I don't think bounds for the random variable are big enough for a given problem
     
     Returns: [xvals, yvals]
     - xvals: the xvalues the function was evaluated at
@@ -868,8 +1241,9 @@ def heteroNoise(f, left_bound, right_bound, num_points, constant, prop_to='x'):
     # evalutate true function values
     fevals = f(xvals)
 
-    # initialize noise vector
+    # initialize noise and variance vectors
     noise = np.zeros(num_points)
+    var_list = np.zeros(num_points)
 
     # check what variable variance is proportional to and apply noise respectively:
     if prop_to == 'x':
@@ -880,25 +1254,32 @@ def heteroNoise(f, left_bound, right_bound, num_points, constant, prop_to='x'):
             for i in range(num_points):
 
                 # compute random constant from [0.05, 1]
-                c = rng.uniform(0.05, 1)
+                c = rng.uniform(upper_var/2, upper_var)
 
                 # set variance to xvals_i * c, and compute corresponing uniform bounds
-                var = abs(xvals[i] * c) # need absolute value b/c variance needs to be positive
+                var = abs(xvals[i] * c) + 1 # need absolute value b/c variance needs to be positive
                 a = np.sqrt(3*var)
+
+                # make guess at variance by randomly generating another random c
+                c_guess = rng.uniform(upper_var/2, upper_var)
+                var_guess = abs(xvals[i] * c_guess) + 1
+
 
                 # get noise value based on bounds [-a, a]
                 noise[i] = rng.uniform(-1*a, a)
+                var_list[i] = var_guess
 
         else: #constant is given
 
             for i in range(num_points):
 
                 # set variance to xvals_i * constant, and compute corresponing uniform bounds
-                var = abs(xvals[i] * constant) # need absolute value b/c variance needs to be positive
+                var = abs(xvals[i] * constant) + 1 # need absolute value b/c variance needs to be positive 
                 a = np.sqrt(3*var)
 
                 # get noise value based on bounds [-a, a]
                 noise[i] = rng.uniform(-1*a, a)
+                var_list[i] = var
 
     else: # noise is proportional to y
 
@@ -908,36 +1289,37 @@ def heteroNoise(f, left_bound, right_bound, num_points, constant, prop_to='x'):
             for i in range(num_points):
 
                 # compute random constant from [0.05, 1]
-                c = rng.uniform(0.05, 1)
+                c = rng.uniform(upper_var/2, upper_var)
 
                 # set variance to xvals_i * c, and compute corresponing uniform bounds
-                var = abs(fevals[i] * c) # need absolute value b/c variance needs to be positive
+                var = abs(fevals[i] * c) + 1 # need absolute value b/c variance needs to be positive
                 a = np.sqrt(3*var)
+
+                # make guess at variance by randomly generating another random c
+                c_guess = rng.uniform(upper_var/2, upper_var)
+                var_guess = abs(fevals[i] * c_guess) + 1
 
                 # get noise value based on bounds [-a, a]
                 noise[i] = rng.uniform(-1*a, a)
+                var_list[i] = var_guess
 
         else: #constant is given
 
             for i in range(num_points):
 
                 # set variance to xvals_i * constant, and compute corresponing uniform bounds
-                var = abs(fevals[i] * constant) # need absolute value b/c variance needs to be positive
+                var = abs(fevals[i] * constant) + 1 # need absolute value b/c variance needs to be positive
                 a = np.sqrt(3*var)
 
                 # get noise value based on bounds [-a, a]
                 noise[i] = rng.uniform(-1*a, a)
+                var_list[i] = var
 
     # add noise values to corresponding function eval values
     yvals = fevals + noise
 
-    return [xvals, yvals]
+    return [xvals, yvals, var_list]
     
-
-
-
-
-
 
 ################################
 # Helper functions for plotting:
@@ -986,4 +1368,9 @@ def changeFontSize(delta):
 #conditioning_plots()
 #linear_QR_comp()
 #poly_QR_comp()
-poly_noise_graphs()
+#poly_noise_graphs()
+WLS_linear()
+#WLS_poly_known()
+#WLS_poly_unknown()
+#linear_noise_comps()
+#poly_noise_comps()
